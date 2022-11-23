@@ -1,0 +1,15 @@
+{
+  "name": "nostr-relay-inspector",
+  "version": "0.0.1",
+  "description": "js library for inspecting nostr relays",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "tape test/*.js"
+  },
+  "dependencies": {
+    "nostr": "0.2.5",
+    "tape": "5.6.1",
+    "yaml-loader": "0.8.0"
+  }
+}
