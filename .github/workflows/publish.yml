@@ -18,7 +18,7 @@ jobs:
         uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_TOKEN }}
-      - if: steps.publish.outputs.type != 'none' and steps.publish.outputs.dry_run != true
+      - if: steps.publish.outputs.type != 'none' && steps.publish.outputs.dry_run != true
         id: create_release
         uses: actions/create-release@latest
         env:
