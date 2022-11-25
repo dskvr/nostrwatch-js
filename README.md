@@ -2,8 +2,10 @@
 Library for inspecting nostr relays. **Work in progress**, drastic changes such as name change, are very likely.
 
 ## Install
+### npm
 `npm install nostr-relay-inspector`
-or
+
+### yarn
 `yarn add nostr-relay-inspector`
 
 ## Usage
