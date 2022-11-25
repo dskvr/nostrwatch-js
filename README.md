@@ -5,7 +5,7 @@ Library for inspecting nostr relays. **Work in progress**, drastic changes such 
 _Not yet published to npm, will be published once beta_ 
 
 ## Usage
-Constructor accepts websocket reference or nostr-js Relay object. 
+Constructor accepts websocket reference or nostr-js `Relay` instance. 
 
 ```
 import { Inspector } from '../path/to/nostr-relay-inspector` 
@@ -18,7 +18,7 @@ inspect = new Inspector('wss://nostr.sandwich.farm');
 
 //or pass a nostr-js Relay instance 
 const relay = new Relay('wss://nostr.sandwich.farm');
-//do some things with the relay
+//...do some things with the relay
 inspect = new Inspector(relay);
 
 inspect.run();
