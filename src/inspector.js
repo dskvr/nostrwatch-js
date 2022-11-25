@@ -138,10 +138,8 @@ Inspector.prototype.check_latency = function() {
   if(this.result.check.read) { this.check_read(true) }
 }
 
-Inspector.prototype.check_nips = async function(){
-  if(this.opts.checkNip05) await this.check_nip(5)
-  //
-  if(this.opts.checkNip11) await this.check_nip(11) //always do this last!
+Inspector.prototype.check_nips = async function() {
+  this.opts.checkNip.filter(nip => nip).forEach( nip => { this.check_nip(nip) } )
 }
 
 Inspector.prototype.check_nip = async function(nip) {
