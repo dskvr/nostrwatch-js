@@ -1,7 +1,10 @@
 //https://github.com/fiatjaf/nostr-tools/blob/master/nip05.js
 import fetch from 'cross-fetch'
 
-async function searchDomain(domain, query = '') {
+const nips = new Array(99).fill({ type: 'object' })
+
+//nip-05
+nips[5].test = async function(domain, query = '') {
   const url = new URL(domain)
   let res = await fetch(`https://${url.hostname}/.well-known/nostr.json?name=${query}`)
                     .then(response => response.json())
@@ -9,26 +12,23 @@ async function searchDomain(domain, query = '') {
   return res && Object.prototype.hasOwnProperty.call(res, 'names') ? res.names : []
 }
 
-async function queryName(fullname) {
+
+//nip-11
+nips[11].test = async function(url){
   try {
-    let [name, domain] = fullname.split('@')
-    if (!domain) return null
+    let [name, url] = fullname.split('@')
+    if (!url) return null
+
+    const headers = { Accept: "appliation/nostr+json" }
 
     let res = await (
-      await fetch(`https://${domain}/.well-known/nostr.json?name=${name}`)
+      await fetch(`https://${domain}/.well-known/nostr.json?name=${name}`, { method: 'get', headers: headers})
     ).json()
 
-    return res.names && res.names[name]
+    return res
   } catch (_) {
     return null
   }
 }
 
-const nip05 = {
-  searchDomain,
-  queryName
-}
-
-export {
-  nip05
-}
+export default nips

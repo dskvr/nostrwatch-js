@@ -3,7 +3,7 @@ import settings from '../settings.yml'
 import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
-import { nip05 } from './nips.js'
+import nips from './nips.js'
 import {Result, Opts, Inbox, Timeout} from './types.js'
 
 export default function Inspector(relay, opts={})
@@ -77,7 +77,7 @@ Inspector.prototype.run = async function() {
     await this.set_geo()
   }
 
-  if(this.opts.checkNip05) await this.check_nip(5)
+  this.check_nips()
 
   return self
 }
@@ -138,17 +138,17 @@ Inspector.prototype.check_latency = function() {
   if(this.result.check.read) { this.check_read(true) }
 }
 
-Inspector.prototype.check_nip = async function(nip) {
+Inspector.prototype.check_nips = async function(){
+  if(this.opts.checkNip05) await this.check_nip(5)
+  //
+  if(this.opts.checkNip11) await this.check_nip(11) //always do this last!
+}
 
-  switch(nip){
-    case 5:
-      if(this.opts.debug)  onsole.log(this.relay.url, "check_nip", nip)
-      let n5 = await nip05.searchDomain(this.relay.url)
-      this.result.nips[5] = Object.keys(n5).length ? n5 : null
-      if(this.result.nips[5]) this.try_complete()
-      if(this.opts.debug) console.log(this.relay.url, "check_nip result", this.nips[5])
-      break;
-  }
+Inspector.prototype.check_nip = async function(nip) {
+  if(this.opts.debug) console.log(this.relay.url, "check_nip", nip);
+  this.result.nips[nip] = await nips[nip].test(this.relay.url)
+  if(this.result.nips[nip]) this.try_complete()
+  if(this.opts.debug) console.log(this.relay.url, "check_nip result", this.nips[nip])
 }
 
 Inspector.prototype.handle_event = function(subid, event) {
