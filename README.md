@@ -4,6 +4,8 @@ Library for inspecting nostr relays. **Work in progress**, drastic changes such 
 ## Install
 _Not yet published to npm, will be published once beta_ 
 
+Download package and put it somewhere locally on system for now. 
+
 ## Usage
 Constructor accepts websocket reference or nostr-js `Relay` instance. 
 
