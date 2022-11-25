@@ -1,16 +1,16 @@
 # nostr-relay-inspector
-Library for inspecting nostr relays. **Work in progress**, drastic changes such as name change, are very likely. 
+Library for inspecting nostr relays. **Work in progress**, drastic changes such as name change, are very likely.
 
 ## Install
-_Not yet published to npm, will be published once beta_ 
-
-Download package and put it somewhere locally on system for now. 
+`npm install nostr-relay-inspector`
+or
+`yarn add nostr-relay-inspector`
 
 ## Usage
-Constructor accepts websocket reference or nostr-js `Relay` instance. 
+Constructor accepts websocket reference or nostr-js `Relay` instance.
 
 ```
-import { Inspector } from '../path/to/nostr-relay-inspector` 
+import { Inspector } from 'nostr-relay-inspector` 
 import { Relay } from 'nostr' //optional!
 
 let inspect;
@@ -18,7 +18,7 @@ let inspect;
 //pass websocket  
 inspect = new Inspector('wss://nostr.sandwich.farm');
 
-//or pass a nostr-js Relay instance 
+//or pass a nostr-js Relay instance
 const relay = new Relay('wss://nostr.sandwich.farm');
 //...do some things with the relay
 inspect = new Inspector(relay);
@@ -34,9 +34,9 @@ inspect
   })
 ```
 
-## Todo 
+## Todo
 - [x] Alpha release
-- [ ] Return collated result object, requires minor refactor 
+- [ ] Return collated result object, requires minor refactor
 - [ ] Clean up the namespace  
-- [ ] Write tests 
-- [ ] Docs 
+- [ ] Write tests
+- [ ] Docs
