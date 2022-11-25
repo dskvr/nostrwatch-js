@@ -14,6 +14,18 @@ jobs:
           node-version: 12
       - run: npm install
       - run: npm test
-      - uses: JS-DevTools/npm-publish@v1
+      - id: publish
+        uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_TOKEN }}
+      - if: steps.publish.outputs.type != 'none' and steps.publish.outputs.dry_run != true
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: v${{steps.publish.outputs.version}}
+          release_name: v${{steps.publish.outputs.version}}
+          body: ""
+          draft: false
+          prerelease: true
