@@ -4,7 +4,7 @@ import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
 import { nip05 } from './nips.js'
-import {RelayResult, Opts, Inbox, Timeout} from './types.js'
+import {Result, Opts, Inbox, Timeout} from './types.js'
 
 export default function Inspector(relay, opts={})
 {

@@ -1,4 +1,4 @@
-export const RelayResult = {
+export const Result = {
   state: "standby",
   protocol: "",
   tor: false,
