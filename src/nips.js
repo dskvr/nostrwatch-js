@@ -3,7 +3,6 @@ import fetch from 'cross-fetch'
 
 async function searchDomain(domain, query = '') {
   const url = new URL(domain)
-
   let res = await fetch(`https://${url.hostname}/.well-known/nostr.json?name=${query}`)
                     .then(response => response.json())
                     .catch(err => console.log(err));

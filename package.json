@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "nostr": "0.2.5",
+    "nostr-relay-inspector": "0.0.3",
     "tape": "5.6.1",
     "yaml-loader": "0.8.0"
   }

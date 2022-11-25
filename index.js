@@ -1,8 +1,13 @@
 /* eslint-disable */
-import Inspector from './lib/inspector.js'
-import Observation from './lib/observation.js'
+import Inspector from './src/inspector.js'
+import Observation as InspectorObservation from './src/observation.js'
+import {InspectorRelayResult, Opts as InspectorOpts, Inbox as InspectorInbox, Timeout as InspectorTimeout} from './types.js'
 
 export {
   Inspector,
-  Observation
+  InspectorObservation,
+  InspectorRelayResult,
+  InspectorOpts,
+  InspectorInbox,
+  InspectorTimeout
 }

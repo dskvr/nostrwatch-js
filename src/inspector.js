@@ -4,66 +4,7 @@ import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
 import { nip05 } from './nips.js'
-
-let RelayResult = {
-  state: "standby",
-  protocol: "",
-  tor: false,
-  latency: {
-    start: null,
-    final: null
-  },
-  identity: {
-    name: ""
-  },
-  ip: "",
-  geo: {},
-  check: {
-    connect: null,
-    read: null,
-    write: null,
-    latency: null,
-  },
-  count: {
-    read: 0,
-    write: 0,
-    latency: 0,
-    error: 0
-  },
-  key: {
-    read: "read",
-    write: "write",
-    latency: "latency"
-  },
-  nips: Array(99).fill(null), //1 based index!
-  observations: [],
-}
-
-const Opts = {
-  checkRead: true,
-  checkWrite: true,
-  checkLatency: false,
-  checkNip05: false,
-  keepAlive: false,
-  getIp: false,
-  getGeo: false,
-  debug: false,
-  run: false,
-}
-
-const Inbox = {
-  notices: [],
-  errors: [],
-  events: [],
-  other: []
-}
-
-const Timeout =  {
-  connect: null,
-  read: null,
-  write: null,
-  latency: null
-}
+import {RelayResult, Opts, Inbox, Timeout} from './types.js'
 
 export default function Inspector(relay, opts={})
 {
