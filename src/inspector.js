@@ -14,7 +14,7 @@ export default function Inspector(relay, opts={})
   this.cb = {}
   this.opts = Object.assign(structuredClone(Opts), opts)
 
-  this.result = structuredClone(RelayResult)
+  this.result = structuredClone(Result)
   this.inbox = structuredClone(Inbox)
   this.timeout = structuredClone(Timeout)
 
@@ -56,14 +56,7 @@ Inspector.prototype.checkLatency = function(){
 }
 
 Inspector.prototype.reset = function(hard){
-  this.result.check.connect = null
-  this.result.check.read = null
-  this.result.check.write = null
-  this.result.check.latency = null
-
-  this.result.check.read = 0
-  this.result.check.write = 0
-  this.result.check.latency = 0
+  this.result = structuredClone(Result)
 }
 
 Inspector.prototype.run = async function() {
