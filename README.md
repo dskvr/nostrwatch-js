@@ -33,7 +33,8 @@ inspect
 ```
 
 ## Todo 
-[ ] Return collated result object, requires minor refactor 
-[ ] Clean up the namespace  
-[ ] Write tests 
-[ ] Docs 
+- [x] Alpha release
+- [ ] Return collated result object, requires minor refactor 
+- [ ] Clean up the namespace  
+- [ ] Write tests 
+- [ ] Docs 
