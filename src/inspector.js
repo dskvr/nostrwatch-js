@@ -8,9 +8,6 @@ import {Result, Opts, Inbox, Timeout} from './types.js'
 
 export default function Inspector(relay, opts={})
 {
-  // if(!(this instanceof(Inspector)))
-  //   return new Inspector(relay, opts)
-
   this.cb = {}
   this.opts = Object.assign(structuredClone(Opts), opts)
 
@@ -72,10 +69,10 @@ Inspector.prototype.run = async function() {
     .on('event',    (subid, event) => self.on_event(subid, event))
     .on('notice',   (notice) => self.on_notice(notice))
 
-  if(this.opts.setGeo) {
-    await this.set_ip()
-    await this.set_geo()
-  }
+  // if(this.opts.setGeo) {
+  //   await this.set_ip()
+  //   await this.set_geo()
+  // }
 
   this.check_nips()
 
@@ -96,39 +93,27 @@ Inspector.prototype.check_read = function(benchmark) {
   const subid = this.key(which)
 
   if(this.opts.debug) console.log(this.relay.url, "check_read", `via: ${which}`, subid)
-
 //  if(benchmark) //debug.info(url, subid, this.result.latency.start)
 
   this.relay.subscribe(subid, {limit: 1, kinds:[1]})
-
   this.timeout[which] = setTimeout(() => {
     if(this.opts.debug) console.log(this.relay.url, "check_read_timeout", `via: ${which}`, subid)
     this.result.check[which] = false
     this.try_complete()
-  }, 10000)
+  }, settings.millis.readTimeout)
 }
 
 Inspector.prototype.check_write = function(benchmark) {
   const subid = this.key(this.result.key.write)
   if(this.opts.debug) console.log(this.relay.url, "check_write", subid)
-  const message = {
-    id: '41ce9bc50da77dda5542f020370ecc2b056d8f2be93c1cedf1bf57efcab095b0',
-    pubkey:
-      '5a462fa6044b4b8da318528a6987a45e3adf832bd1c64bd6910eacfecdf07541',
-    created_at: 1640305962,
-    kind: 1,
-    tags: [],
-    content: 'running branle',
-    sig: '08e6303565e9282f32bed41eee4136f45418f366c0ec489ef4f90d13de1b3b9fb45e14c74f926441f8155236fb2f6fef5b48a5c52b19298a0585a2c06afe39ed'
-  }
-
-  this.relay.send(["EVENT", message])
-  this.relay.subscribe(subid, {limit: 1, kinds:[1], ids:['41ce9bc50da77dda5542f020370ecc2b056d8f2be93c1cedf1bf57efcab095b0']})
+  const ev = settings.testEvent
+  this.relay.send(["EVENT", ev])
+  this.relay.subscribe(subid, {limit: 1, kinds:[1], ids:[settings.testEvent.id]})
   this.timeout.write = setTimeout(() => {
     //debug.info(url, "did write", id, false)
     if(!benchmark) this.result.check.write = false
     this.try_complete()
-  }, 10000)
+  }, settings.millis.writeTimeout)
 }
 
 Inspector.prototype.check_latency = function() {
@@ -164,7 +149,7 @@ Inspector.prototype.handle_read = function(subid, event){
     this.relay.unsubscribe(subid)
     this.try_complete()
     if(this.opts.checkLatency) this.check_latency()
-    setTimeout( () => { clearTimeout(this.timeout.read) }, 1000)
+    setTimeout( () => { clearTimeout(this.timeout.read) }, settings.millis.clearTimeoutBuffer)
     if(this.opts.debug) console.log(this.relay.url, 'cleared timeout', 'read', this.timeout.read)
   }
   this.result.count.read++
@@ -174,11 +159,11 @@ Inspector.prototype.handle_write = function(subid, event){
   if(this.opts.debug) console.log(this.relay.url, `handle_${subid.split('_')[0]}`)
   if(this.result.count.write < 1) {
     this.result.check.write = true
-    setTimeout( () => { clearTimeout(this.timeout.write) }, 1000)
+    setTimeout( () => { clearTimeout(this.timeout.write) }, settings.millis.clearTimeoutBuffer)
     if(this.opts.debug) console.log(this.relay.url, 'cleared timeout', 'write', this.timeout.write)
     this.try_complete()
   }
-  this.result.writeEventCount++
+  this.result.count.write++
 }
 
 Inspector.prototype.handle_latency = function(subid, event){
@@ -187,10 +172,10 @@ Inspector.prototype.handle_latency = function(subid, event){
     this.result.check.latency = true
     this.result.latency.final = Date.now() - this.result.latency.start
     this.try_complete()
-    setTimeout( () =>{ clearTimeout(this.timeout.latency) }, 1000)
+    setTimeout( () => { clearTimeout(this.timeout.latency) }, settings.millis.clearTimeoutBuffer)
     if(this.opts.debug) console.log(this.relay.url, 'cleared timeout', 'latency', this.timeout.latency)
   }
-  this.result.latencyEventCount++
+  this.result.count.latency++
 }
 
 // PRIVATE
@@ -205,20 +190,13 @@ Inspector.prototype.on_open = function(e) {
   setTimeout( () => {
     clearTimeout(this.timeout.connect)
     if(this.opts.debug) console.log(this.relay.url, 'cleared timeout', 'connect', this.timeout.connect)
-  }, 1000)
+  }, settings.millis.clearTimeoutBuffer)
 
   this.result.check.connect = true
-
   if(this.opts.checkRead) this.check_read()
-
   if(this.opts.checkWrite) this.check_write()
 
-
-
   this.try_complete()
-
-  //debug.info(url, "did connect", this.result.check.connect)
-
   this.cbcall("open", e, this.result)
 }
 
@@ -232,7 +210,7 @@ Inspector.prototype.on_close = function(e) {
 Inspector.prototype.on_eose = function(e) {
   if(this.opts.debug) console.log(this.relay.url, "on_eose")
 
-  this.result.nips[15] = true
+  if(this.opts.passiveNipTests) this.result.nips[15] = true
 
   this.cbcall("eose", e, this.result)
 }
@@ -241,9 +219,9 @@ Inspector.prototype.on_eose = function(e) {
 Inspector.prototype.on_ok = function(ok) {
   if(this.opts.debug) console.log(this.relay.url, "on_ok")
 
-  this.cbcall("ok", ok)
+  if(this.opts.passiveNipTests) this.result.nips[20] = true
 
-  this.result.nips[20] = true
+  this.cbcall("ok", ok)
 }
 
 // ON_ERROR
@@ -299,27 +277,27 @@ Inspector.prototype.observe = function() {
     this.result.observations.push(new Observation('caution', 'FILTER_LIMIT_IGNORED', `The relay ignored the "limit" parameter during subscription and returned more events than were asked for. Asked for 1 but recieved ${this.result.count.read}`, 'sub:filter:limit'))
 }
 
-Inspector.prototype.set_ip = async function get_ip() {
-  if(this.opts.debug) console.log(this.relay.url, "get_ip")
-  //debug.warning('this uses public apis and may leak your ip!')
-  let ip
-  await fetch(`https://1.1.1.1/dns-query?name=${this.relay.url.replace('wss://', '')}`, { headers: { 'accept': 'application/dns-json' } })
-    .then(response => response.json())
-    .then((data) => { ip = data.Answer ? data.Answer[data.Answer.length-1].data : false });
-  this.result.ip = ip
-  return
-}
-
-Inspector.prototype.set_geo = async function() {
-  if(this.opts.debug) console.log(this.relay.url, "get_geo")
-  //debug.warning('this uses public apis and may leak your ip!')
-  if (!this.result.ip) return
-  await fetch(`https://ip-api.com/json/${this.result.ip}`, { headers: { 'accept': 'application/dns-json' } })
-    .then(response => response.json())
-    .then((data) => { this.result.geo = data });
-  // alert(this.result.geo)
-  return
-}
+// Inspector.prototype.set_ip = async function get_ip() {
+//   if(this.opts.debug) console.log(this.relay.url, "get_ip")
+//   //debug.warning('this uses public apis and may leak your ip!')
+//   let ip
+//   await fetch(`https://1.1.1.1/dns-query?name=${this.relay.url.replace('wss://', '')}`, { headers: { 'accept': 'application/dns-json' } })
+//     .then(response => response.json())
+//     .then((data) => { ip = data.Answer ? data.Answer[data.Answer.length-1].data : false });
+//   this.result.ip = ip
+//   return
+// }
+//
+// Inspector.prototype.set_geo = async function() {
+//   if(this.opts.debug) console.log(this.relay.url, "get_geo")
+//   //debug.warning('this uses public apis and may leak your ip!')
+//   if (!this.result.ip) return
+//   await fetch(`https://ip-api.com/json/${this.result.ip}`, { headers: { 'accept': 'application/dns-json' } })
+//     .then(response => response.json())
+//     .then((data) => { this.result.geo = data });
+//   // alert(this.result.geo)
+//   return
+// }
 
 Inspector.prototype.connect_timeout = function(relay_url){
   if(this.opts.debug) console.log(relay_url, "connect_timeout_init")
@@ -328,7 +306,7 @@ Inspector.prototype.connect_timeout = function(relay_url){
     if(this.opts.debug) console.log(relay_url, "TIMEOUT")
     // if(Object.keys(this.result.notes).length == 0) this.result.notes['Reason: Timeout'] = {}
     this.hard_fail()
-  }, 20000)
+  }, settings.millis.connectTimeout)
 }
 
 Inspector.prototype.hard_fail = function(){

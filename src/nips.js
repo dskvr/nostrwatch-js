@@ -1,13 +1,14 @@
 import settings from '../settings.yml'
-
-//https://github.com/fiatjaf/nostr-tools/blob/master/nip05.js
 import fetch from 'cross-fetch'
 
-const nips = new Array(settings.nipsTotal+1).fill({ type: 'object', test: ()=>{} })
-console.log(settings, nips)
+const NipTest = {
+  type: Object, //Object (object/array) or Boolean
+  test: ( nip ) => { return } //for success return respective of 'type', and false for fail.
+}
 
+const nips = new Array(settings.nipsTotal+1).fill(NipTest);
 
-//nip-05
+//nip-05 ... https://github.com/fiatjaf/nostr-tools/blob/master/nip05.js
 nips[5].test = async function(domain, query = '') {
   const url = new URL(domain)
   let res = await fetch(`https://${url.hostname}/.well-known/nostr.json?name=${query}`)

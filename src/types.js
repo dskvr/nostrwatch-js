@@ -38,10 +38,11 @@ export const Opts = {
   checkRead: true,
   checkWrite: true,
   checkLatency: false,
+  passiveNipTests: true,
   checkNip: Array(settings.nipsTotal+1).fill(null),
   keepAlive: false,
-  getIp: false,
-  getGeo: false,
+  // getIp: false,
+  // getGeo: false,
   debug: false,
   run: false,
 }
