@@ -36,6 +36,24 @@ Inspector.prototype.get = function(member) {
     return result[member]
 }
 
+Inspector.prototype.setOpts = function() {
+  //checkNip, [1,2,3,4], true
+  //checkNip, 11, true
+  if(arguments[0] == 'checkNip'){
+    if(typeof arguments[1] === 'string') {
+      argments[0] = arguments[1]
+    }
+    if(Array.isArray(arguments[1])) {
+      arguments[1].forEach((nip) => {
+        this.opts.checkNip[nip] = arguments[2]
+      })
+    }
+  }
+  else {
+    this.opts[arguments[0]] = arguments[1]
+  }
+}
+
 Inspector.prototype.getMessages = function(member) {
   if (!member)
     return this.inbox

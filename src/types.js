@@ -39,30 +39,19 @@ export const Opts = {
   checkWrite: true,
   checkLatency: false,
   passiveNipTests: true,
+  checkNips: true,
   checkNip: Array(settings.nipsTotal+1).fill(null),
   keepAlive: false,
   // getIp: false,
   // getGeo: false,
   debug: false,
-  run: false,
+  run: false
 }
 
-Opts.checkNip[1] = true
-Opts.checkNip[2] = true
-Opts.checkNip[3] = true
-Opts.checkNip[4] = true
-Opts.checkNip[9] = true
-Opts.checkNip[11] = true
-Opts.checkNip[12] = true
-Opts.checkNip[13] = true
-Opts.checkNip[15] = true
-Opts.checkNip[15] = true
-Opts.checkNip[16] = true
-Opts.checkNip[20] = true
-Opts.checkNip[22] = true
-Opts.checkNip[26] = true
-Opts.checkNip[33] = true
-
+//Check widely supported nips by default
+[1,2,3,4,5,9,11,12,13,15,16,20,22,26,33].forEach(nip => {
+  checkNip[nip] = true
+})
 
 export const Inbox = {
   notices: [],
