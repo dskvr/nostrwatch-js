@@ -1,6 +1,7 @@
 import config from '../config.yml'
 
 export const Result = {
+  uri: "",
   state: "standby",
   info: {},
   protocol: "",

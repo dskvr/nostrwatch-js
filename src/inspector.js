@@ -20,6 +20,7 @@ export default function Inspector(relay, opts={})
 
   this.relay = (relay instanceof(Relay)) ? this.instanced=true && relay : new Relay(relay)
   this.result.state = 'pending'
+  this.result.uri = this.relay.url
 
   if(this.opts.debug) console.log(relay, 'options', this.opts)
 
