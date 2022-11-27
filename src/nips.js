@@ -1,4 +1,4 @@
-import settings from '../settings.yml'
+import config from '../config.yml'
 import fetch from 'cross-fetch'
 
 const NipTest = {
@@ -6,26 +6,32 @@ const NipTest = {
   test: ( nip ) => { return } //for success return respective of 'type', and false for fail.
 }
 
-const nips = new Array(settings.nipsTotal+1).fill(NipTest);
+const nips = new Object();
 
 //nip-05 ... https://github.com/fiatjaf/nostr-tools/blob/master/nip05.js
-nips[5].test = async function(domain, query = '') {
-  const url = new URL(domain)
-  let res = await fetch(`https://${url.hostname}/.well-known/nostr.json?name=${query}`)
-                    .then(response => response.json())
-                    .catch(err => console.log(err));
-  return res && Object.prototype.hasOwnProperty.call(res, 'names') ? res.names : false
-}
+nips['5']      = structuredClone(NipTest)
+nips['5'].test =
 
 //nip-11
-nips[11].test = async function(domain){
-  const url = new URL(domain),
-        headers = { Accept: "application/nostr+json" }
+nips['11']      = structuredClone(NipTest)
+nips['11'].test = async function(domain){
 
-  let res = await fetch(`https://${domain}/`, { method: 'get', headers: headers})
-                    .then(response => response.json())
-                    .catch(err => console.log(err));
+  const url = new URL(domain),
+        headers = {
+          "Accept": "application/nostr+json",
+        }
+
+  console.log(`https://${url.hostname}/`, 'check_nip_11')
+
+  let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
+                    .then(response => {
+                      try { JSON.parse(JSON.stringify(response)) } catch (e) { return false; }
+                      return response.json()
+                    })
+                    .catch(err => console.log(err))
   return res ? res : false
 }
+
+console.log(nips)
 
 export default nips

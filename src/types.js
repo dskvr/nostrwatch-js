@@ -1,16 +1,15 @@
-import settings from '../settings.yml'
+import config from '../config.yml'
 
 export const Result = {
   state: "standby",
+  info: {},
   protocol: "",
   tor: false,
   latency: {
     start: null,
     final: null
   },
-  identity: {
-    name: ""
-  },
+  identities: {},
   ip: "",
   geo: {},
   check: {
@@ -30,7 +29,7 @@ export const Result = {
     write: "write",
     latency: "latency"
   },
-  nips: Array(settings.nipsTotal+1).fill(null), //1 based index!
+  nips: Array(config.nipsTotal+1).fill(null), //1 based index!
   observations: [],
 }
 
@@ -40,18 +39,14 @@ export const Opts = {
   checkLatency: false,
   passiveNipTests: true,
   checkNips: true,
-  checkNip: Array(settings.nipsTotal+1).fill(null),
+  checkNip: Array(config.nipsTotal+1).fill(null),
+  resetNips: false,
   keepAlive: false,
   // getIp: false,
   // getGeo: false,
   debug: false,
   run: false
 }
-
-//Check widely supported nips by default
-[1,2,3,4,5,9,11,12,13,15,16,20,22,26,33].forEach(nip => {
-  checkNip[nip] = true
-})
 
 export const Inbox = {
   notices: [],
