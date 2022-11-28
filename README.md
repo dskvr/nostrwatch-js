@@ -1,7 +1,7 @@
 # nostr-relay-inspector
 Library for inspecting nostr relays. 
 
-**Presently alpha, result objects and API are prone to change.**
+**Presently alpha, result objects and API are prone to change. Docs will be published shortly after beta**
 
 ## Install
 ### npm
