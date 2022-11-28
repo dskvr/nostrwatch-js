@@ -39,6 +39,8 @@ export const Opts = {
   checkWrite: true,
   checkLatency: false,
   passiveNipTests: true,
+  getInfo: true,
+  getIdentities: true,
   checkNips: true,
   checkNip: Array(config.nipsTotal+1).fill(null),
   resetNips: false,
@@ -46,7 +48,9 @@ export const Opts = {
   // getIp: false,
   // getGeo: false,
   debug: false,
-  run: false
+  run: false,
+
+
 }
 
 export const Inbox = {
