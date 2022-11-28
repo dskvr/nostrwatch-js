@@ -1,5 +1,7 @@
 # nostr-relay-inspector
-Library for inspecting nostr relays. **Work in progress**, drastic changes such as name change, are very likely.
+Library for inspecting nostr relays. 
+
+**Presently alpha, result objects and API are prone to change.**
 
 ## Install
 ### npm
