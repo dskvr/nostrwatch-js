@@ -3,7 +3,7 @@ import config from '../config.yml'
 import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
-import {Result, Opts, Inbox, Timeout} from './types.js'
+import {Result, Opts, Inbox, Timeout, Info} from './types.js'
 
 export default function Inspector(relay, opts={})
 {
@@ -13,6 +13,7 @@ export default function Inspector(relay, opts={})
   this.result = structuredClone(Result)
   this.inbox = structuredClone(Inbox)
   this.timeout = structuredClone(Timeout)
+  // this.result.info = structuredClone(Info)
   this.instanced = false
 
   this.connect_timeout(relay)
@@ -24,7 +25,7 @@ export default function Inspector(relay, opts={})
   if(this.opts.debug)
     console.log(relay, 'options', this.opts)
 
-  this.opts.checkNip[5] = true
+  // this.opts.checkNip[5] = true
 
   if(opts.run)
     this.run()
@@ -75,28 +76,32 @@ Inspector.prototype.getInfo = async function(){
           "Accept": "application/nostr+json",
         }
 
-  if(this.opts.debug)
-    console.log(`https://${url.hostname}/`, 'check_nip_11')
 
-  return await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
+  let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
       .then(response => {
         try { JSON.parse(JSON.stringify(response)) } catch (e) { return false; }
         return response.json()
       })
       .catch(err => this.cbcall('error', err)) ;
+
+  if(this.opts.debug)
+    console.log(`https://${url.hostname}/`, 'check_nip_11', res)
+
+  return res
 }
 
 Inspector.prototype.getIdentities = async function() {
   const url = new URL(this.relay.url)
 
-  if(this.opts.debug)
-    console.log(`https://${url.hostname}/`, 'check_nip_5')
+
 
   let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
                     .then(response => response.json())
                     .catch(err => console.log(err));
 
-  console.log(`https://${url.hostname}/`, 'check_nip_5')
+  if(this.opts.debug)
+    console.log(`https://${url.hostname}/`, 'check_nip_5', res)
+
   return res && Object.prototype.hasOwnProperty.call(res, 'names') ? res.names : false
 }
 
@@ -131,14 +136,10 @@ Inspector.prototype.run = async function() {
       .on('event',    (subid, event) => self.on_event(subid, event))
       .on('notice',   (notice) => self.on_notice(notice))
 
-  return self
+  return this
 }
 
 Inspector.prototype.key = function(id){
-  return `${id}_${this.relay.url}`
-}
-
-Inspector.prototype.subid = function(id){
   return `${id}_${this.relay.url}`
 }
 
@@ -160,10 +161,10 @@ Inspector.prototype.check_read = function(benchmark) {
 }
 
 Inspector.prototype.check_write = function(benchmark) {
+  const subid = this.key(this.result.key.write)
+
   if(this.opts.debug)
     console.log(this.relay.url, "check_write", subid)
-
-  const subid = this.key(this.result.key.write)
 
   const ev = config.testEvent
   this.relay.send(["EVENT", ev])
@@ -398,28 +399,6 @@ Inspector.prototype.observe = function() {
   if(this.result.count.read > 1)
     this.result.observations.push(new Observation('caution', 'FILTER_LIMIT_IGNORED', `The relay ignored the "limit" parameter during subscription and returned more events than were asked for. Asked for 1 but recieved ${this.result.count.read}`, 'sub:filter:limit'))
 }
-
-// Inspector.prototype.set_ip = async function get_ip() {
-//   if(this.opts.debug) console.log(this.relay.url, "get_ip")
-//   //debug.warning('this uses public apis and may leak your ip!')
-//   let ip
-//   await fetch(`https://1.1.1.1/dns-query?name=${this.relay.url.replace('wss://', '')}`, { headers: { 'accept': 'application/dns-json' } })
-//     .then(response => response.json())
-//     .then((data) => { ip = data.Answer ? data.Answer[data.Answer.length-1].data : false });
-//   this.result.ip = ip
-//   return
-// }
-//
-// Inspector.prototype.set_geo = async function() {
-//   if(this.opts.debug) console.log(this.relay.url, "get_geo")
-//   //debug.warning('this uses public apis and may leak your ip!')
-//   if (!this.result.ip) return
-//   await fetch(`https://ip-api.com/json/${this.result.ip}`, { headers: { 'accept': 'application/dns-json' } })
-//     .then(response => response.json())
-//     .then((data) => { this.result.geo = data });
-//   // alert(this.result.geo)
-//   return
-// }
 
 Inspector.prototype.connect_timeout = function(relay_url){
   if(this.opts.debug)

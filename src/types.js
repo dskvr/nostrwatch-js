@@ -49,8 +49,33 @@ export const Opts = {
   // getGeo: false,
   debug: false,
   run: false,
+}
 
+export const Info = {
+  pubkey: "",
+  contact: "",
+  software: "",
+  version: "0.0.0",
+  supported_nips: [],
+  description: ""
+}
 
+export const Geo = {
+  status: null,
+  country: "",
+  countryCode: "",
+  region: "",
+  regionName: "",
+  city: "",
+  zip: "",
+  lat: 0.0,
+  lon: 1.0,
+  timezone: "",
+  isp: "",
+  org: "",
+  as: "",
+  query: "",
+  dns: {},
 }
 
 export const Inbox = {
