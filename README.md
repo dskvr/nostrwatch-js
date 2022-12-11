@@ -27,8 +27,6 @@ const relay = new Relay('wss://nostr.sandwich.farm');
 //...do some things with the relay
 inspect = new Inspector(relay);
 
-inspect.run();
-
 inspect
   .on('open', (e, result) => {
     console.log('unprocessed', result);
@@ -36,6 +34,7 @@ inspect
   .on('complete', (e, result) => {
     console.log('processed relay', result);
   })
+  .run()
 ```
 
 ## Todo
