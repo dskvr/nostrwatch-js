@@ -7,33 +7,60 @@ import {Result, Opts, Inbox, Timeout, Info} from './types.js'
 
 export default function Inspector(relay, opts={})
 {
-  this.cb = {}
-  this.opts = Object.assign(structuredClone(Opts), opts)
-
-  this.result = structuredClone(Result)
-  this.inbox = structuredClone(Inbox)
-  this.timeout = structuredClone(Timeout)
-  // this.result.info = structuredClone(Info)
-  this.instanced = false
-
+  this.setup(opts)
   this.connect_timeout(relay)
-
   this.relay = (relay instanceof(Relay)) ? this.instanced=true && relay : new Relay(relay)
   this.result.state = 'pending'
   this.result.uri = this.relay.url
 
-  if(this.opts.debug)
-    console.log(relay, 'options', this.opts)
-
-  // this.opts.checkNip[5] = true
-
-  if(opts.run)
+  if(this.opts.run)
     this.run()
 
   return this
 }
 
 // PUBLIC
+Inspector.prototype.run = async function() {
+  if(this.opts.debug) 
+    console.log(this.relay.url, "running")
+
+  if(!this.opts.run) //if autorun don't call run callback.
+    this.cbcall('run', this.result)
+
+  const self = this
+
+  if(!this.instanced)
+    //Wrap nostr-js events
+    this.relay
+      .on('open',     (e) => self.on_open(e))
+      .on('eose',     (e) => self.on_eose(e))
+      .on('error',    (e) => self.on_error(e))
+      .on('ok',       (e) => self.on_ok(e))
+      .on('close',    (e) => self.on_close(e))
+      .on('event',    (subid, event) => self.on_event(subid, event))
+      .on('notice',   (notice) => self.on_notice(notice))
+
+  return this
+}
+
+
+Inspector.prototype.setup = function(opts){
+
+  this.cb = {}
+  this.opts = Object.assign(structuredClone(Opts), opts)
+
+  this.result = structuredClone(Result)
+  this.inbox = structuredClone(Inbox)
+  this.timeout = structuredClone(Timeout)
+  this.instanced = false
+
+  if(this.opts?.data !== null)
+    this.result = this.opts?.data?.result ? Object.assign(this.result, this.opts.data.result) : this.result
+    this.inbox = this.opts?.data?.inbox || this.inbox
+
+  if(this.opts.debug)
+    console.log(this.relay?.url, 'options', this.opts)
+}
 
 Inspector.prototype.get = function(member) {
   if (!member)
@@ -71,6 +98,13 @@ Inspector.prototype.getMessages = function(member) {
 }
 
 Inspector.prototype.getInfo = async function(){
+  if(Object.keys(this.result?.info).length)
+    return this.result.info
+
+  return await this.getInfoRemote()
+}
+
+Inspector.prototype.getInfoRemote = async function(){
   const url = new URL(this.relay.url),
         headers = {
           "Accept": "application/nostr+json",
@@ -106,7 +140,7 @@ Inspector.prototype.getIdentities = async function() {
 }
 
 Inspector.prototype.checkLatency = function(){
-  this.check_latency()
+  return this.check_latency()
 }
 
 Inspector.prototype.nip = function(nip_num){
@@ -117,40 +151,17 @@ Inspector.prototype.reset = function(hard){
   this.result = structuredClone(Result)
 }
 
-Inspector.prototype.run = async function() {
-  if(this.opts.debug) console.log(this.relay.url, "running")
-
-  if(!this.opts.run) //if autorun don't call run callback.
-    this.cbcall('run', this.result)
-
-  const self = this
-
-  if(!this.instanced)
-    //Wrap nostr-js events
-    this.relay
-      .on('open',     (e) => self.on_open(e))
-      .on('eose',     (e) => self.on_eose(e))
-      .on('error',    (e) => self.on_error(e))
-      .on('ok',       (e) => self.on_ok(e))
-      .on('close',    (e) => self.on_close(e))
-      .on('event',    (subid, event) => self.on_event(subid, event))
-      .on('notice',   (notice) => self.on_notice(notice))
-
-  return this
-}
-
 Inspector.prototype.key = function(id){
   return `${id}_${this.relay.url}`
 }
 
 Inspector.prototype.check_read = function(benchmark) {
-  // if(this.opts.debug) console.log(this.relay.url, "check_read")
+  if(this.opts.debug) console.log(this.relay.url, "check_read")
   const which = benchmark ? this.result.key.latency : this.result.key.read
   const subid = this.key(which)
 
   if(this.opts.debug)
     console.log(this.relay.url, "check_read", `via: ${which}`, subid)
-//  if(benchmark) //debug.info(url, subid, this.result.latency.start)
 
   this.relay.subscribe(subid, {limit: 1, kinds:[1]})
   this.timeout[which] = setTimeout(() => {
@@ -189,13 +200,19 @@ Inspector.prototype.check_latency = function() {
 }
 
 Inspector.prototype.get_info = async function(){
+
   this.result.info = await this.getInfo()
 
-  if(this.result.info && this.opts.passiveNipTests)
+  if(this.result?.info && this.opts.passiveNipTests)
     this.result.nips[11] = true
 
-  if(this.result.info.pubkey)
+  if(this.result?.info?.pubkey)
     this.result.identities = Object.assign(this.result.identities, { serverAdmin: this.result.info.pubkey })
+
+  if(this.opts.debug)
+    console.log('get_info', this.result.info)
+
+  return true
 }
 
 Inspector.prototype.get_identities = async function(){
@@ -230,10 +247,11 @@ Inspector.prototype.handle_read = function(subid, event){
   if(this.result.count.read < 1) {
     this.result.check.read = true
     this.relay.unsubscribe(subid)
-    this.try_complete()
 
     if(this.opts.checkLatency)
       this.check_latency()
+
+    this.try_complete()
 
     setTimeout( () => { clearTimeout(this.timeout.read) }, config.millis.clearTimeoutBuffer)
 
@@ -289,7 +307,6 @@ Inspector.prototype.on_open = function(e) {
 
   setTimeout( () => {
     clearTimeout(this.timeout.connect)
-
     if(this.opts.debug)
       console.log(this.relay.url, 'cleared timeout', 'connect', this.timeout.connect)
   }, config.millis.clearTimeoutBuffer)
@@ -387,9 +404,12 @@ Inspector.prototype.try_complete = function() {
 
     this.observe()
 
-    if(!this.opts.keepAlive) this.relay.close()
+    if(!this.opts.keepAlive) 
+      this.relay.close()
 
-    if(this.opts.debug) console.log(this.relay.url, 'checks', this.result.check)
+    if(this.opts.debug) 
+      console.log(this.relay.url, 'checks', this.result.check)
+    
     this.cbcall('complete', this)
   }
 }

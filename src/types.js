@@ -37,7 +37,7 @@ export const Result = {
 export const Opts = {
   checkRead: true,
   checkWrite: true,
-  checkLatency: false,
+  checkLatency: true,
   passiveNipTests: true,
   getInfo: true,
   getIdentities: true,
