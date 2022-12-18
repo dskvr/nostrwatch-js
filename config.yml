@@ -1,8 +1,8 @@
 nipsTotal: 40
 millis:
-    connectTimeout: 10000
-    readTimeout: 10000
-    writeTimeout: 10000
+    connectTimeout: 15000
+    readTimeout: 15000
+    writeTimeout: 15000
     clearTimeoutBuffer: 1000
 testEvent:
   id: '41ce9bc50da77dda5542f020370ecc2b056d8f2be93c1cedf1bf57efcab095b0'
