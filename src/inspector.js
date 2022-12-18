@@ -161,7 +161,7 @@ Inspector.prototype.get_info = async function(){
   this.result.info = await this.getInfo()
 
   if(this.result?.info && this.opts.passiveNipTests)
-    this.result.nips[11] = true
+    this.info?.supported_nips.forEach(nip => this.result.nips[nip] = true)
 
   if(this.result?.info?.pubkey)
     this.result.identities = Object.assign(this.result.identities, { serverAdmin: this.result.info.pubkey })
@@ -268,8 +268,6 @@ Inspector.prototype.handle_event = function(subid, event) {
     }, config.millis.clearTimeoutBuffer)
   }
 
-  console.log('AHHH', type, method, this.relay.url)
-
   this.result.count[type]++
 }
 
@@ -279,7 +277,7 @@ Inspector.prototype.handle_event = function(subid, event) {
   Event Callbacks
 */
 
-Inspector.prototype.on_open = function(e) {
+Inspector.prototype.on_open = async function(e) {
   if(this.opts.debug) console.log(this.relay.url, "on_open")
 
   //debug.info(url, "OPEN")
@@ -293,6 +291,12 @@ Inspector.prototype.on_open = function(e) {
 
   this.result.check.connect = true
 
+  if(this.opts.getInfo)
+    await this.get_info()
+
+  if(this.opts.getIdentities)
+    await this.get_identities()
+
   if(this.opts.checkRead)
     this.check_read()
 
@@ -300,13 +304,7 @@ Inspector.prototype.on_open = function(e) {
     this.check_write()
 
   if(this.opts.checkLatency)
-      this.check_latency()
-
-  if(this.opts.getInfo)
-    this.get_info()
-
-  if(this.opts.getIdentities)
-    this.get_identities()
+    this.check_latency()
 
   this.try_complete()
   this.cbcall("open", e, this.result)
