@@ -3,8 +3,9 @@ import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
 import {Result, Opts, Inbox, Timeout, Info} from './types.js'
-import config from '../config.js'
+import config from '../config'
 import { isJson } from './util.js'
+import fetch from 'cross-fetch'
 
 export default function Inspector(relay, opts={})
 {
@@ -49,7 +50,6 @@ Inspector.prototype.close = async function() {
 } 
 
 Inspector.prototype.setup = function(opts){
-
   this.cb = {}
   this.opts = Object.assign(structuredClone(Opts), opts)
 
@@ -117,8 +117,7 @@ Inspector.prototype.getInfoRemote = async function(){
 
   let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
       .then(response => response.json().catch() )
-      .catch()
-      // .catch(err => this.cbcall('error', err)) ;
+      .catch(err => this.cbcall('error', err)) ;
 
   if(this.opts.debug)
     console.log(`https://${url.hostname}/`, 'check_nip_11', res)
@@ -132,7 +131,7 @@ Inspector.prototype.getIdentities = async function() {
   try {
     let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
                       .then(response => isJson(response) ? response.json().catch() : false)
-                      .catch();
+                      .catch(err => this.cbcall('error', err)) ;
 
     if(this.opts.debug)
       console.log(`https://${url.hostname}/`, 'check_nip_5', res)
