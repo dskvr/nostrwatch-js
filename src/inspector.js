@@ -1,9 +1,10 @@
 /* eslint-disable */
-import config from '../config.yml'
 import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
 import {Result, Opts, Inbox, Timeout, Info} from './types.js'
+import config from '../config.js'
+import { isJson } from './util.js'
 
 export default function Inspector(relay, opts={})
 {
@@ -43,6 +44,9 @@ Inspector.prototype.run = async function() {
   return this
 }
 
+Inspector.prototype.close = async function() {
+  this.relay.close()
+} 
 
 Inspector.prototype.setup = function(opts){
 
@@ -110,13 +114,9 @@ Inspector.prototype.getInfoRemote = async function(){
         headers = {
           "Accept": "application/nostr+json",
         }
-
-
+        
   let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
-      .then(response => {
-        try { JSON.parse(JSON.stringify(response)) } catch (e) { return false; }
-        return response.json()
-      })
+      .then(response => isJson(response) ? response.json().catch() : false )
       .catch(err => this.cbcall('error', err)) ;
 
   if(this.opts.debug)
@@ -128,16 +128,18 @@ Inspector.prototype.getInfoRemote = async function(){
 Inspector.prototype.getIdentities = async function() {
   const url = new URL(this.relay.url)
 
+  try {
+    let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
+                      .then(response => isJson(response) ? response.json().catch() : false)
+                      .catch();
 
+    if(this.opts.debug)
+      console.log(`https://${url.hostname}/`, 'check_nip_5', res)
 
-  let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
-                    .then(response => response.json())
-                    .catch(err => console.log(err));
-
-  if(this.opts.debug)
-    console.log(`https://${url.hostname}/`, 'check_nip_5', res)
-
-  return res && Object.prototype.hasOwnProperty.call(res, 'names') ? res.names : false
+    return res && Object.prototype.hasOwnProperty.call(res, 'names') ? res.names : false
+  } catch(e) {
+    ""
+  }
 }
 
 Inspector.prototype.checkLatency = function(){
@@ -278,10 +280,12 @@ Inspector.prototype.handle_event = function(subid, event) {
 */
 
 Inspector.prototype.on_open = async function(e) {
-  if(this.opts.debug) console.log(this.relay.url, "on_open")
+  if(this.opts.debug) 
+    console.log(this.relay.url, "on_open")
 
   //debug.info(url, "OPEN")
-  if(this.opts.debug) console.dir(this)
+  if(this.opts.debug) 
+    console.dir(this)
 
   setTimeout( () => {
     clearTimeout(this.timeout.connect)
