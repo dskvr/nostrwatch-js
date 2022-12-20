@@ -3,7 +3,7 @@ import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
 import {Result, Opts, Inbox, Timeout, Info} from './types.js'
-import config from '../config'
+import config from '../config/index.js'
 import { isJson } from './util.js'
 import fetch from 'cross-fetch'
 
