@@ -114,10 +114,11 @@ Inspector.prototype.getInfoRemote = async function(){
         headers = {
           "Accept": "application/nostr+json",
         }
-        
+
   let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
-      .then(response => isJson(response) ? response.json().catch() : false )
-      .catch(err => this.cbcall('error', err)) ;
+      .then(response => response.json().catch() )
+      .catch()
+      // .catch(err => this.cbcall('error', err)) ;
 
   if(this.opts.debug)
     console.log(`https://${url.hostname}/`, 'check_nip_11', res)
