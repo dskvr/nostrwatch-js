@@ -117,7 +117,7 @@ Inspector.prototype.getInfoRemote = async function(){
 
   let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
       .then(response => response.json().catch() )
-      .catch(err => this.cbcall('error', err)) ;
+      .catch(err => console.log(`getInfo() 404 ${this.relay.url}`)) ;
 
   if(this.opts.debug)
     console.log(`https://${url.hostname}/`, 'check_nip_11', res)
@@ -131,7 +131,7 @@ Inspector.prototype.getIdentities = async function() {
   try {
     let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
                       .then(response => isJson(response) ? response.json().catch() : false)
-                      .catch(err => this.cbcall('error', err)) ;
+                      .catch(err => console.log(`getIdentities() 404 ${this.relay.url}`)) ;
 
     if(this.opts.debug)
       console.log(`https://${url.hostname}/`, 'check_nip_5', res)
