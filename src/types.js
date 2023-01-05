@@ -49,6 +49,9 @@ export const Opts = {
   // getGeo: false,
   debug: false,
   run: false,
+  connectTimeout: 15000,
+  readTimeout: 15000,
+  writeTimeout: 15000
 }
 
 export const Info = {
