@@ -35,7 +35,7 @@ inspect
 
 # Example
 ```
-checkRelay(){
+checkRelay(relay){
   let inspect = new Inspector(relay)
   inspect
     .on('complete', inspector => {
@@ -44,16 +44,16 @@ checkRelay(){
       else 
         doSomething({})
     })
-    .on('error', inspector => {
-      errored++
-      doSomething({})
-    })
+    .on('error', inspector => doSomething(inspector.result, true))
     .run()
     .catch( console.error )  
 }
 
-doSomething(result){
-  alert(`${relay.url} - Connect?: ${relay.check.connect ? 'yes' : 'no'}, Read?: ${relay.check.read ? 'yes' : 'no'}, Write?: ${relay.check.write ? 'yes' : 'no'}`
+doSomething(result, error){
+  if(!error)
+    alert(`${relay.url} - Connect?: ${relay.check.connect ? 'yes' : 'no'}, Read?: ${relay.check.read ? 'yes' : 'no'}, Write?: ${relay.check.write ? 'yes' : 'no'}`
+  else
+    alert(`there was an error on ${result.url}`)
 }
 
 checkRelay('wss://nostr.damus.io')
