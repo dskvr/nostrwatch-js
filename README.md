@@ -35,7 +35,7 @@ inspect
 
 # Example
 ```
-processRelays(){
+checkRelay(){
   let inspect = new Inspector(relay)
   inspect
     .on('complete', inspector => {
@@ -53,8 +53,10 @@ processRelays(){
 }
 
 doSomething(result){
-  alert(`${relay.url}${}`${})${}
+  alert(`${relay.url} - Connect?: ${relay.check.connect ? 'yes' : 'no'}, Read?: ${relay.check.read ? 'yes' : 'no'}, Write?: ${relay.check.write ? 'yes' : 'no'}`
+}
 
+checkRelay('wss://nostr.damus.io')
 ```
 
 ## Todo
