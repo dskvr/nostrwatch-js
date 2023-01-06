@@ -2,7 +2,7 @@
 import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
-import {Result, Opts, Inbox, Timeout, Info} from './types.js'
+import { Result, Opts, Timeout } from './types.js'
 import config from '../config/index.js'
 import { isJson } from './util.js'
 import fetch from 'cross-fetch'
@@ -64,14 +64,15 @@ Inspector.prototype.setup = function(opts){
   this.opts = Object.assign(structuredClone(Opts), opts)
 
   this.result = structuredClone(Result)
-  this.inbox = structuredClone(Inbox)
   this.timeout = structuredClone(Timeout)
   this.instanced = false
   this.promises = {}
+  this.log = new Array()
 
-  if(this.opts?.data !== null)
+  if(this.opts?.data !== null) { 
     this.result = this.opts?.data?.result ? Object.assign(this.result, this.opts.data.result) : this.result
-    this.inbox = this.opts?.data?.inbox || this.inbox
+    this.log = this.opts?.data?.log || this.log
+  }
 
   if(this.opts.debug)
     console.log('options', this.opts)
@@ -101,11 +102,11 @@ Inspector.prototype.setOpts = function() {
   }
 }
 
-Inspector.prototype.getMessages = function(member) {
+Inspector.prototype.getInbox = function(member) {
   if (!member)
-    return this.inbox
+    return this.log
 
-  if (this.inbox.hasOwnProperty(member))
+  if (this.log.hasOwnProperty(member))
     return this.result[member]
 
   if(this.opts.debug)
@@ -126,8 +127,14 @@ Inspector.prototype.getInfoRemote = async function(){
         }
 
   let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
-      .then(response => response.json().catch( err => console.error(`${this.relay.url}`, err) ) )
-      .catch(err => console.error(`${this.relay.url}`, err)) ;
+      .then(response => response.json().catch( err => { 
+        console.error(`${this.relay.url}`, err) 
+        this.log.push(['error', err])
+      }) )
+      .catch(err => {
+        console.error(`${this.relay.url}`, err) 
+        this.log.push(['error', err])
+      });
 
   if(this.opts.debug)
     console.log(`https://${url.hostname}/`, 'check_nip_11', res)
@@ -140,8 +147,14 @@ Inspector.prototype.getIdentities = async function() {
 
   try {
     let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
-                      .then(response => isJson(response) ? response.json().catch( err => console.error(`${this.relay.url}`, err) ) : false)
-                      .catch(err => console.log(`getIdentities() 404 ${this.relay.url}`, err)) ;
+                      .then(response => isJson(response) ? response.json().catch( err => { 
+                          console.error(`${this.relay.url}`, err) 
+                          this.log.push(['error', err])
+                        }) : false)
+                      .catch(err => {
+                        console.log(`getIdentities() 404 ${this.relay.url}`, err)
+                        this.log.push(['error', err])
+                      });
 
     if(this.opts.debug)
       console.log(`https://${url.hostname}/`, 'check_nip_5', res)
@@ -149,6 +162,7 @@ Inspector.prototype.getIdentities = async function() {
     return res && Object.prototype.hasOwnProperty.call(res, 'names') ? res.names : false //TODO: this is wrong
   } catch(err) {
     console.error(`${this.relay.url}`, err)
+    this.log.push(['error', err])
   }
 }
 
@@ -260,8 +274,6 @@ Inspector.prototype.handle_event = function(subid, event) {
   const type = subid.split('_')[0]
   const method = `handle_${type}`
 
-  this.inbox.events.push(event)
-
   if(this.opts.debug)
     console.log(this.relay.url, method)
 
@@ -329,14 +341,16 @@ Inspector.prototype.on_close = function(e) {
   this.cbcall("close", e, this.result)
 }
 
-Inspector.prototype.on_eose = function(e) {
+Inspector.prototype.on_eose = function(eose) {
   if(this.opts.debug)
     console.log(this.relay.url, "on_eose")
 
   if(this.opts.passiveNipTests)
     this.result.nips[15] = true
 
-  this.cbcall("eose", e, this.result)
+  this.log.push(['eose', eose])
+
+  this.cbcall("eose", eose, this.result)
 }
 
 Inspector.prototype.on_ok = function(ok) {
@@ -345,6 +359,8 @@ Inspector.prototype.on_ok = function(ok) {
 
   if(this.opts.passiveNipTests)
     this.result.nips[20] = true
+  
+  this.log.push(['ok', ok])
 
   this.cbcall("ok", ok)
 }
@@ -354,10 +370,11 @@ Inspector.prototype.on_error = function(err) {
     if(this.opts.debug)
       console.log(this.relay.url, "on_error")
 
-    this.inbox.errors.push(err)
     clearTimeout(this.timeout.connect)
     this.result.observations['Reason: Error'] = {}
     this.hard_fail()
+
+    // this.log.push(['wserror', err])
     this.cbcall("error", err)
   }
   this.result.count.error++
@@ -366,12 +383,15 @@ Inspector.prototype.on_error = function(err) {
 Inspector.prototype.on_event = function(subid, event) {
   if(this.opts.debug)
     console.log(this.relay.url, "on_event", subid)
+  
+  this.log.push(['event', event])
   this.handle_event(subid, event)
+
   this.cbcall("event", subid, event, this.result)
 }
 
 Inspector.prototype.on_notice = function(notice) {
-  this.inbox.notices.push(notice)
+  this.log.push(['notice', notice])
   // this.result.observations[code_obj.description] = message_obj
   this.cbcall("notice", notice, this.result)
 }
@@ -391,8 +411,7 @@ Inspector.prototype.try_complete = function() {
       console.log(this.relay.url, "did_complete", connect, read, write, latency, this.result.check)
 
     this.result.state = 'complete'
-
-    // this.observe()
+    this.result.inbox = this.getInbox()
 
     if(!this.opts.keepAlive) 
       this.relay.close()

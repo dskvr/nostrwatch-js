@@ -85,7 +85,9 @@ export const Inbox = {
   notices: [],
   errors: [],
   events: [],
-  other: []
+  other: [],
+  ok: [],
+  eose: []
 }
 
 export const Timeout =  {
