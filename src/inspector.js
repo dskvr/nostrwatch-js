@@ -20,7 +20,7 @@ export default function Inspector(relay, opts={})
     this.relay =  new Relay(relay)
   }
   this.result.state = 'pending'
-  this.result.uri = this.relay.url
+  this.result.url = this.relay.url
 
   if(this.opts.run)
     this.run()
@@ -426,7 +426,7 @@ Inspector.prototype.try_complete = function() {
 Inspector.prototype.observe = function() {
   if(this.opts.debug) console.log(this.relay.url, "observe")
   if(this.result.count.read > 1)
-    this.result.observations.push(new Observation('caution', 'FILTER_LIMIT_IGNORED', `The relay ignored the "limit" parameter during subscription and returned more events than were asked for. Asked for 1 but recieved ${this.result.count.read}`, 'sub:filter:limit'))
+    this.result.observations.push(new Observation('caution', 'FILTER_LIMIT_IGNORED', `The relay ignored the "limit" parameter durlng subscription and returned more events than were asked for. Asked for 1 but recieved ${this.result.count.read}`, 'sub:filter:limit'))
 }
 
 Inspector.prototype.connect_timeout = function(relay_url){

@@ -33,6 +33,30 @@ inspect
   .run()
 ```
 
+# Example
+```
+processRelays(){
+  let inspect = new Inspector(relay)
+  inspect
+    .on('complete', inspector => {
+      if( inspector.result instanceof Object)
+        doSomething(inspector.result)
+      else 
+        doSomething({})
+    })
+    .on('error', inspector => {
+      errored++
+      doSomething({})
+    })
+    .run()
+    .catch( console.error )  
+}
+
+doSomething(result){
+  alert(`${relay.url}${}`${})${}
+
+```
+
 ## Todo
 - [x] Alpha release
 - [ ] Return collated result object, requires minor refactor

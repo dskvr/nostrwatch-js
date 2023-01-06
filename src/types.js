@@ -1,7 +1,7 @@
 import config from '../config/index.js'
 
 export const Result = {
-  uri: "",
+  url: "",
   state: "standby",
   info: {},
   protocol: "",
