@@ -11,19 +11,15 @@ Library for inspecting nostr relays.
 `yarn add nostr-relay-inspector`
 
 ## Usage
-Constructor accepts websocket reference or nostr-js `Relay` instance.
 
 ```
 import { Inspector } from 'nostr-relay-inspector` 
-import { Relay } from 'nostr' //optional!
 
 let inspect;
 
-//pass websocket  
+//pass websocket reference 
 inspect = new Inspector('wss://nostr.sandwich.farm');
 
-//or pass a nostr-js Relay instance
-const relay = new Relay('wss://nostr.sandwich.farm');
 //...do some things with the relay
 inspect = new Inspector(relay);
 
