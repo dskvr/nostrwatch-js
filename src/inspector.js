@@ -278,6 +278,8 @@ Inspector.prototype.handle_event = function(subid, event) {
     console.log(this.relay.url, method)
 
   if(this.result.count[type] < 1) {
+    this.log.push(['event', event])
+
     this.result.check[type] = true
 
     if("latency" == type)
@@ -383,8 +385,7 @@ Inspector.prototype.on_error = function(err) {
 Inspector.prototype.on_event = function(subid, event) {
   if(this.opts.debug)
     console.log(this.relay.url, "on_event", subid)
-  
-  this.log.push(['event', event])
+
   this.handle_event(subid, event)
 
   this.cbcall("event", subid, event, this.result)
