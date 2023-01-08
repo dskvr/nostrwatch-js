@@ -276,24 +276,23 @@ Inspector.prototype.handle_event = function(subid, event) {
 
   if(this.opts.debug)
     console.log(this.relay.url, method)
-  
-  if(this.result.count[type] > 1)
-    return
 
-  this.log.push(['event', event])
+  if(this.result.count[type] < 1) {
+    this.result.check[type] = true
 
-  if("latency" == type)
-    this.result.latency.final = Date.now() - this.result.latency.start
-    if(!this.result.check.read) //if there's latency, there's a read, force read to true
-      this.result.check.read = true
+    if("latency" == type)
+      this.result.latency.final = Date.now() - this.result.latency.start
+      if(!this.result.check.read) //if there's latency, there's a read, force read to true
+        this.result.check.read = true
 
-  this.try_complete()
+    this.try_complete()
 
-  setTimeout( () => { 
-    clearTimeout(this.timeout[type])
-    if(this.opts.debug)
-      console.log(this.relay.url, 'cleared timeout', type, this.timeout[type])
-  }, config.millis.clearTimeoutBuffer)
+    setTimeout( () => { 
+      clearTimeout(this.timeout[type])
+      if(this.opts.debug)
+        console.log(this.relay.url, 'cleared timeout', type, this.timeout[type])
+    }, config.millis.clearTimeoutBuffer)
+  }
 
   this.result.count[type]++
 }
@@ -384,7 +383,8 @@ Inspector.prototype.on_error = function(err) {
 Inspector.prototype.on_event = function(subid, event) {
   if(this.opts.debug)
     console.log(this.relay.url, "on_event", subid)
-
+  
+  this.log.push(['event', event])
   this.handle_event(subid, event)
 
   this.cbcall("event", subid, event, this.result)
@@ -468,6 +468,6 @@ Inspector.prototype.on = function(method, fn) {
 Inspector.prototype.cbcall = function(method) {
   [].shift.call(arguments,1)
 
-  if(this.cb[method] instanceof Function)
+  if(typeof this.cb[method] === 'function')
     this.cb[method](...arguments)
 }
