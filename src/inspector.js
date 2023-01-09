@@ -7,13 +7,10 @@ import config from '../config/index.js'
 import { isJson } from './util.js'
 import fetch from 'cross-fetch'
 
-console.log('using dev version')
-
 export default function Inspector(relay, opts={})
 {
-  console.log(relay instanceof Relay)
   this.setup(opts)
-  this.relay =  new Relay(relay)
+  this.relay =  new Relay(relay, {reconnect: false})
   this.result.state = 'pending'
   this.result.url = this.relay.url
 
@@ -153,11 +150,12 @@ Inspector.prototype.getIdentities = async function() {
 
     if(this.opts.debug)
       console.log(`https://${url.hostname}/`, 'check_nip_5', res)
-
-    return res && Object.prototype.hasOwnProperty.call(res, 'names') ? res.names : false //TODO: this is wrong
+    
+    return res?.names ? res.names : false
   } catch(err) {
     console.error(`${this.relay.url}`, err)
     this.log.push(['error', err])
+    return  false
   }
 }
 
@@ -397,7 +395,7 @@ Inspector.prototype.try_complete = function() {
       latency = this.result.check.latency !== null || this.opts.checkLatency !== true
 
   const didComplete = connect && read && write && latency
-  
+
   if(this.opts.debug)
     console.log(this.relay.url, "try_complete", connect, read, write, latency, this.result.check)
 
