@@ -7,18 +7,13 @@ import config from '../config/index.js'
 import { isJson } from './util.js'
 import fetch from 'cross-fetch'
 
+console.log('using dev version')
+
 export default function Inspector(relay, opts={})
 {
   console.log(relay instanceof Relay)
   this.setup(opts)
-  if(relay instanceof Relay){
-    console.log('nostr-js:relay detected')
-    this.instanced=true
-    this.relay = relay
-  }
-  else {
-    this.relay =  new Relay(relay)
-  }
+  this.relay =  new Relay(relay)
   this.result.state = 'pending'
   this.result.url = this.relay.url
 
@@ -368,15 +363,12 @@ Inspector.prototype.on_ok = function(ok) {
 }
 
 Inspector.prototype.on_error = function(err) {
+  if(this.opts.debug)
+    console.log(this.relay.url, "on_error", err)
+
   if(this.result.count.error == 0) {
-    if(this.opts.debug)
-      console.log(this.relay.url, "on_error")
-
     clearTimeout(this.timeout.connect)
-    this.result.observations['Reason: Error'] = {}
     this.hard_fail()
-
-    // this.log.push(['wserror', err])
     this.cbcall("error", err)
   }
   this.result.count.error++
@@ -399,15 +391,20 @@ Inspector.prototype.on_notice = function(notice) {
 
 
 Inspector.prototype.try_complete = function() {
-  let connect = typeof this.result.check.connect !== 'object', //check null
-      read = typeof this.result.check.read !== 'object' || this.opts.checkRead !== true,
-      write = typeof this.result.check.write !== 'object' || this.opts.checkWrite !== true,
-      latency = typeof this.result.check.latency !== 'object' || this.opts.checkLatency !== true
+  let connect = this.result.check.connect !== null, //check null
+      read = this.result.check.read !== null || this.opts.checkRead !== true,
+      write = this.result.check.write !== null || this.opts.checkWrite !== true,
+      latency = this.result.check.latency !== null || this.opts.checkLatency !== true
 
+  const didComplete = connect && read && write && latency
+  
   if(this.opts.debug)
     console.log(this.relay.url, "try_complete", connect, read, write, latency, this.result.check)
 
-  if(connect && read && write && latency) {
+  if(didComplete) {
+    if(this.result.state == 'complete')
+      return
+
     if(this.opts.debug)
       console.log(this.relay.url, "did_complete", connect, read, write, latency, this.result.check)
 

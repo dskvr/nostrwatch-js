@@ -2,17 +2,6 @@
 # yarn lockfile v1
 
 
-alby@1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/alby/-/alby-1.0.1.tgz#45478313a8c6b11c0a803b0a1cafbea9558a5731"
-  integrity sha512-pXi2mcjpW7C5bniwZDRxiwxim19mMPg5m/0SbMILw9v+EVXJ+UP40gU+ektd7jcE/N39WGja2igVGZTyhXp1vQ==
-  dependencies:
-    jsonschema "^1.2.4"
-    lodash.clonedeep "^4.5.0"
-    lodash.get "^4.4.2"
-    lodash.merge "^4.6.1"
-    lodash.set "^4.3.2"
-
 argparse@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/argparse/-/argparse-2.0.1.tgz#246f50f3ca78a3240f6c997e8a9bd1eac49e4b38"
@@ -471,11 +460,6 @@ json5@^2.1.2:
   resolved "https://registry.yarnpkg.com/json5/-/json5-2.2.2.tgz#64471c5bdcc564c18f7c1d4df2e2297f2457c5ab"
   integrity sha512-46Tk9JiOL2z7ytNQWFLpj99RZkVgeHf87yGQKsIkaPz1qSH9UczKH1rO7K3wgRselo0tYMUNfecYpm/p1vC7tQ==
 
-jsonschema@^1.2.4:
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/jsonschema/-/jsonschema-1.4.1.tgz#cc4c3f0077fb4542982973d8a083b6b34f482dab"
-  integrity sha512-S6cATIPVv1z0IlxdN+zUk5EPjkGCdnhN4wVSBlvoUO1tOLJootbo9CquNJmbIh4yikWHiUedhRYrNPn1arpEmQ==
-
 loader-utils@^2.0.0:
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/loader-utils/-/loader-utils-2.0.4.tgz#8b5cb38b5c34a9a018ee1fc0e6a066d1dfcc528c"
@@ -484,26 +468,6 @@ loader-utils@^2.0.0:
     big.js "^5.2.2"
     emojis-list "^3.0.0"
     json5 "^2.1.2"
-
-lodash.clonedeep@^4.5.0:
-  version "4.5.0"
-  resolved "https://registry.yarnpkg.com/lodash.clonedeep/-/lodash.clonedeep-4.5.0.tgz#e23f3f9c4f8fbdde872529c1071857a086e5ccef"
-  integrity sha512-H5ZhCF25riFd9uB5UCkVKo61m3S/xZk1x4wA6yp/L3RFP6Z/eHH1ymQcGLo7J3GMPfm0V/7m1tryHuGVxpqEBQ==
-
-lodash.get@^4.4.2:
-  version "4.4.2"
-  resolved "https://registry.yarnpkg.com/lodash.get/-/lodash.get-4.4.2.tgz#2d177f652fa31e939b4438d5341499dfa3825e99"
-  integrity sha512-z+Uw/vLuy6gQe8cfaFWD7p0wVv8fJl3mbzXh33RS+0oW2wvUqiRXiQ69gLWSLpgB5/6sU+r6BlQR0MBILadqTQ==
-
-lodash.merge@^4.6.1:
-  version "4.6.2"
-  resolved "https://registry.yarnpkg.com/lodash.merge/-/lodash.merge-4.6.2.tgz#558aa53b43b661e1925a0afdfa36a9a1085fe57a"
-  integrity sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==
-
-lodash.set@^4.3.2:
-  version "4.3.2"
-  resolved "https://registry.yarnpkg.com/lodash.set/-/lodash.set-4.3.2.tgz#d8757b1da807dde24816b0d6a84bea1a76230b23"
-  integrity sha512-4hNPN5jlm/N/HLMCO43v8BXKq9Z7QdAGc/VGrRD61w8gN9g/6jF9A4L1pbUgBLCffi0w9VsXfTOij5x8iTyFvg==
 
 minimatch@^3.0.4, minimatch@^3.1.1:
   version "3.1.2"
@@ -543,33 +507,10 @@ node-fetch@3.3.0:
     fetch-blob "^3.1.4"
     formdata-polyfill "^4.0.10"
 
-nostr-relay-inspector@0.0.19:
-  version "0.0.19"
-  resolved "https://registry.yarnpkg.com/nostr-relay-inspector/-/nostr-relay-inspector-0.0.19.tgz#f55dd25644e43e9a0158e653f4eee8c325fa4662"
-  integrity sha512-tmr+fQ96m72TgOQFXejn7HNsoUPhWrXW85n1yD/lLTlkZevX0FusSJ+jWa9u54Ht1EsvdV8+Qb26qeM+eVws7g==
-  dependencies:
-    alby "1.0.1"
-    cross-fetch "3.1.5"
-    js-yaml "4.1.0"
-    node-fetch "3.3.0"
-    nostr "0.2.5"
-    nostr-relay-inspector "0.0.3"
-    tape "5.6.1"
-    yaml-loader "0.8.0"
-
-nostr-relay-inspector@0.0.3:
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/nostr-relay-inspector/-/nostr-relay-inspector-0.0.3.tgz#a5bda69877535db719dd80bbcd0e41faec69a958"
-  integrity sha512-Lk4mSf+FFWauEk3P7R/xe2eUFytlEYQUzCsnHV7bmk8Y9vMa7xeDK3qnJ+uul1UHCfhDWL+aiN9WMYpscnruYA==
-  dependencies:
-    nostr "0.2.5"
-    tape "5.6.1"
-    yaml-loader "0.8.0"
-
-nostr@0.2.5:
-  version "0.2.5"
-  resolved "https://registry.yarnpkg.com/nostr/-/nostr-0.2.5.tgz#0315ec5ffd51225e667c79bfaca1a52907b529a3"
-  integrity sha512-0U4UURBhoN+/QtJPEiuJ/0mrfKp9NcO/cEaAAVsAa0Ge1cG89K7h0LT3ou6i+0SClZBrmp57TWga9tXDJcCzvQ==
+nostr@0.2.7:
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/nostr/-/nostr-0.2.7.tgz#14bf238b00a37b1ef02c9b854d3462fbe918a213"
+  integrity sha512-Yq5tkiCTJtohs7H7Fx+Ki83bR8b3xapdwYi17HunhW5EQfZ9rI0cIXFyihj2ZRkv/0YYvVBiCp/KIaLYt5LyfQ==
   dependencies:
     noble-secp256k1 "^1.2.14"
     ws "^8.8.1"
