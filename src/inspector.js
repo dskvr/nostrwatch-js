@@ -144,7 +144,7 @@ Inspector.prototype.getIdentities = async function() {
                           this.log.push(['error', err])
                         }) : false)
                       .catch(err => {
-                        console.log(`getIdentities() 404 ${this.relay.url}`, err)
+                        console.error(`getIdentities() 404 ${this.relay.url}`, err)
                         this.log.push(['error', err])
                       });
 
@@ -364,7 +364,7 @@ Inspector.prototype.on_error = function(err) {
   if(this.opts.debug)
     console.log(this.relay.url, "on_error", err)
 
-  if(this.result.count.error == 0) {
+  if(this.result.count.error == 0 && this.state === 'pending') {
     clearTimeout(this.timeout.connect)
     this.hard_fail()
     this.cbcall("error", err)
@@ -397,17 +397,17 @@ Inspector.prototype.try_complete = function() {
   const didComplete = connect && read && write && latency
 
   if(this.opts.debug)
-    console.log(this.relay.url, "try_complete", connect, read, write, latency, this.result.check)
+    console.log(this.relay.url, "try_complete", `state: ${this.result.state}`, connect, read, write, latency, this.result.check)
 
   if(didComplete) {
-    if(this.result.state == 'complete')
+    if(this.result.state === 'complete')
       return
 
     if(this.opts.debug)
       console.log(this.relay.url, "did_complete", connect, read, write, latency, this.result.check)
 
     this.result.state = 'complete'
-    this.result.inbox = this.getInbox()
+    // this.result.inbox = this.getInbox()
 
     if(!this.opts.keepAlive) 
       this.relay.close()
@@ -432,12 +432,14 @@ Inspector.prototype.connect_timeout = function(relay_url){
   this.timeout.connect = setTimeout(() => {
     if(this.opts.debug)
       console.log(relay_url, "connect_timeout")
-
     this.hard_fail()
   }, this.opts.connectTimeout)
 }
 
 Inspector.prototype.hard_fail = function(){
+  if(this.state === 'complete')
+    return 
+    
   if(this.opts.debug)
     console.log(this.relay.url, "hard_fail")
 
@@ -463,6 +465,8 @@ Inspector.prototype.on = function(method, fn) {
 
 Inspector.prototype.cbcall = function(method) {
   [].shift.call(arguments,1)
+
+  // console.log(this.relay.url, 'cbcall', method, ...arguments)
 
   if(typeof this.cb[method] === 'function')
     this.cb[method](...arguments)
