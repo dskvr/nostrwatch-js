@@ -1,7 +1,7 @@
 import config from '../config/index.js'
 
 export const Result = {
-  url: "",
+  uri: "",
   state: "standby",
   info: {},
   protocol: "",
@@ -18,6 +18,7 @@ export const Result = {
     read: null,
     write: null,
     latency: null,
+    ssl: null
   },
   count: {
     read: 0,
@@ -42,7 +43,9 @@ export const Opts = {
   getInfo: true,
   getIdentities: true,
   checkNips: true,
-  checkNip: Array(config.nipsTotal+1).fill(null),
+  checkNips: true,
+  checkSsl: true,
+  // checkNip: Array(config.nipsTotal+1).fill(null),
   resetNips: false,
   keepAlive: false,
   // getIp: false,

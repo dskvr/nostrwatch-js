@@ -4,7 +4,7 @@ import { Relay } from 'nostr'
 import crypto from 'crypto'
 import { Result, Opts, Timeout } from './types.js'
 import config from '../config/index.js'
-import { isJson } from './util.js'
+import { isJson, getSSLCertificateInfo } from './util.js'
 import fetch from 'cross-fetch'
 
 export default function Inspector(relay, opts={})
@@ -16,6 +16,10 @@ export default function Inspector(relay, opts={})
 
   if(this.opts.run)
     this.run()
+  
+  if(!this.relay.onfn.open)
+    this.relay
+      .on('open',     (e) => this.on_open(e))
 
   return this
 }
@@ -29,17 +33,14 @@ Inspector.prototype.run = async function() {
 
   // if(!this.instanced)
   //Wrap nostr-js events
-  if(!this.relay.onfn.open)
-    this.relay
-      .on('open',     (e) => this.on_open(e))
 
   this.relay
-    .on('eose',     (e) => this.on_eose(e))
-    .on('error',    (e) => this.on_error(e))
-    .on('ok',       (e) => this.on_ok(e))
-    .on('close',    (e) => this.on_close(e))
-    .on('event',    (subid, event) => this.on_event(subid, event))
-    .on('notice',   (notice) => this.on_notice(notice))
+      .on('eose',(e) =>               this.on_eose(e) )
+      .on('error',(e) =>              this.on_error(e) )
+      .on('ok',(e) =>                 this.on_ok(e) )
+      .on('close',(e) =>              this.on_close(e) )
+      .on('event',(subid, event) =>   this.on_event(subid, event) )
+      .on('notice',(notice) =>             this.on_notice(notice) )
 
   if(!this.opts.run) //only call if not autorun
     this.cbcall('run', this.result)
@@ -94,16 +95,16 @@ Inspector.prototype.setOpts = function() {
   }
 }
 
-Inspector.prototype.getInbox = function(member) {
-  if (!member)
-    return this.log
+// Inspector.prototype.getInbox = function(member) {
+//   if (!member)
+//     return this.log
 
-  if (this.log.hasOwnProperty(member))
-    return this.result[member]
+//   if (this.log.hasOwnProperty(member))
+//     return this.result[member]
 
-  if(this.opts.debug)
-    console.log('getMessage', 'What you are looking for does not exist')
-}
+//   if(this.opts.debug)
+//     console.log('getMessage', 'What you are looking for does not exist')
+// }
 
 Inspector.prototype.getInfo = async function(){
   if(this.result?.info && Object.keys(this.result?.info).length)
@@ -196,9 +197,6 @@ Inspector.prototype.get_identities = async function(){
   this.result.identities = Object.assign(this.result.identities, identities)
 }
 
-/*
-  Event Emitters
-*/
 Inspector.prototype.check_read = function(benchmark) {
   const which = benchmark ? 'latency' : 'read'
   const subid = this.key(which)
@@ -224,6 +222,32 @@ Inspector.prototype.check_read = function(benchmark) {
     this.try_complete()
   }, this.opts.readTimeout)
 }
+
+Inspector.prototype.check_ssl = async function() {
+
+  const url = new URL(this.relay.url)
+
+  console.log(url.hostname, "check_ssl()")
+    
+  this.result.check.ssl = true
+
+  try {
+    const res = await getSSLCertificateInfo(url.hostname);
+    if(res.daysRemaining <= 0 || !res.valid) {
+      this.result.check.ssl = false
+    }
+  } catch(err)  {
+    this.result.check.ssl = false
+  }
+  
+  // if(this.opts.debug)
+  console.log(url, "check_ssl()", this.result.check.ssl)
+
+  this.try_complete()
+  
+  return this.result.check.ssl
+
+};
 
 Inspector.prototype.check_write = function(benchmark) {
   const subid = this.key('write')
@@ -317,6 +341,9 @@ Inspector.prototype.on_open = async function(e) {
 
   if(this.opts.getIdentities)
     await this.get_identities()
+  
+  if(this.opts.checkSsl)
+    await this.check_ssl()
 
   if(this.opts.checkRead)
     this.check_read()
@@ -326,6 +353,8 @@ Inspector.prototype.on_open = async function(e) {
 
   if(this.opts.checkLatency)
     this.check_latency()
+
+  
 
   this.try_complete()
   this.cbcall("open", e, this.result)
@@ -362,7 +391,7 @@ Inspector.prototype.on_ok = function(ok) {
 
 Inspector.prototype.on_error = function(err) {
   if(this.opts.debug)
-    console.log(this.relay.url, "on_error", err)
+    console.log(this.relay.url, this.state, "on_error", err)
 
   if(this.result.count.error == 0 && this.state === 'pending') {
     clearTimeout(this.timeout.connect)
@@ -392,9 +421,10 @@ Inspector.prototype.try_complete = function() {
   let connect = this.result.check.connect !== null, //check null
       read = this.result.check.read !== null || this.opts.checkRead !== true,
       write = this.result.check.write !== null || this.opts.checkWrite !== true,
-      latency = this.result.check.latency !== null || this.opts.checkLatency !== true
+      latency = this.result.check.latency !== null || this.opts.checkLatency !== true,
+      ssl = this.result.check.ssl !== null || this.opts.checkSsl !== true
 
-  const didComplete = connect && read && write && latency
+  const didComplete = connect && read && write && latency && ssl
 
   if(this.opts.debug)
     console.log(this.relay.url, "try_complete", `state: ${this.result.state}`, connect, read, write, latency, this.result.check)
@@ -416,6 +446,8 @@ Inspector.prototype.try_complete = function() {
       console.log(this.relay.url, 'checks', this.result.check)
     
     this.cbcall('complete', this)
+
+    console.log('ssl', this.result.check.ssl) 
   }
 }
 
