@@ -1,5 +1,5 @@
 'use strict';
-import https from 'https'
+import https from 'https-browserify'
 import validator from 'validator'
 
 export const isJson = function(str) {

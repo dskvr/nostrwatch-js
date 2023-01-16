@@ -2,9 +2,11 @@
 import Observation from './observation.js'
 import { Relay } from 'nostr'
 import crypto from 'crypto'
+// import { isValidSSL } from 'ssl-validator'
+import sslChecker from 'ssl-checker'
 import { Result, Opts, Timeout } from './types.js'
 import config from '../config/index.js'
-import { isJson, getSSLCertificateInfo } from './util.js'
+import { isJson } from './util.js'
 import fetch from 'cross-fetch'
 
 export default function Inspector(relay, opts={})
@@ -232,7 +234,7 @@ Inspector.prototype.check_ssl = async function() {
   this.result.check.ssl = true
 
   try {
-    const res = await getSSLCertificateInfo(url.hostname);
+    const res = await sslChecker(url.hostname);;
     if(res.daysRemaining <= 0 || !res.valid) {
       this.result.check.ssl = false
     }
