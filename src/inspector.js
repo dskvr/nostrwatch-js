@@ -27,8 +27,15 @@ Inspector.prototype.run = async function() {
 
   this.connect_timeout(this.relay.url)
 
-  // if(!this.instanced)
-  //Wrap nostr-js events
+  this.bind_events()
+
+  if(!this.opts.run) //only call if not autorun
+    this.cbcall('run', this.result)
+
+  return this
+}
+
+Inspector.prototype.bind_events = function(){
   if(!this.relay.onfn.open)
     this.relay
       .on('open',     (e) => this.on_open(e))
@@ -40,11 +47,6 @@ Inspector.prototype.run = async function() {
     .on('close',    (e) => this.on_close(e))
     .on('event',    (subid, event) => this.on_event(subid, event))
     .on('notice',   (notice) => this.on_notice(notice))
-
-  if(!this.opts.run) //only call if not autorun
-    this.cbcall('run', this.result)
-
-  return this
 }
 
 Inspector.prototype.close = async function() {
@@ -113,54 +115,85 @@ Inspector.prototype.getInfo = async function(){
 }
 
 Inspector.prototype.getInfoRemote = async function(){
+  let result
   const url = new URL(this.relay.url),
         headers = {
           "Accept": "application/nostr+json",
         }
 
-  let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
-      .then(response => response.json().catch( err => { 
-        console.error(`${this.relay.url}`, err) 
-        this.log.push(['error', err])
-      }) )
+   result = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
+      .then(response => {
+        return response.json().catch( err => { 
+          console.error(`${this.relay.url}`, err) 
+          this.log.push(['error', err])
+        })
+      })
       .catch(err => {
         console.error(`${this.relay.url}`, err) 
         this.log.push(['error', err])
       });
+      
 
   if(this.opts.debug)
-    console.log(`https://${url.hostname}/`, 'check_nip_11', res)
+    console.log(`https://${url.hostname}/`, 'check_nip_11', result)
 
-  return res
+  return result
 }
 
 Inspector.prototype.getIdentities = async function() {
   const url = new URL(this.relay.url)
-
   try {
-    let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
-                      .then(response => isJson(response) ? response.json().catch( err => { 
-                          console.error(`${this.relay.url}`, err) 
-                          this.log.push(['error', err])
-                        }) : false)
-                      .catch(err => {
-                        console.error(`getIdentities() 404 ${this.relay.url}`, err)
-                        this.log.push(['error', err])
-                      });
+    let result = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
+        .then(response => {
+          if (isJson(response))
+            return response.json()
+              .catch( err => { 
+                console.error(`${this.relay.url}`, err) 
+                this.log.push(['error', err])
+              })
+          else  
+            return false
+        })
+        .catch(err => {
+          console.error(`getIdentities() 404 ${this.relay.url}`, err)
+          this.log.push(['error', err])
+        });
 
     if(this.opts.debug)
-      console.log(`https://${url.hostname}/`, 'check_nip_5', res)
+      console.log(`https://${url.hostname}/`, 'check_nip_5', result)
     
-    return res?.names ? res.names : false
+    return result?.names ? result.names : false
+    
   } catch(err) {
     console.error(`${this.relay.url}`, err)
     this.log.push(['error', err])
-    return  false
+    return false
   }
 }
 
-Inspector.prototype.checkLatency = function(){
-  return this.check_latency()
+Inspector.prototype.watchResult = async function(type){
+  return new Promise( resolve => {
+    const timeout = setTimeout( () => {
+      clearTimeout(timeout)
+      clearInterval(watcher)
+      this.resolve(false)
+    }, 20000)
+    const watcher = setInterval(() => {
+      if('latency' === type) {
+        if(this.result.check.latency !== null) {
+          clearTimeout(timeout)
+          clearInterval(watcher)
+          resolve(this.result.check.latency ? this.result.latency.final : false)
+        }
+      }
+    })
+  })
+}
+
+Inspector.prototype.checkLatency = async function(){
+  this.bind_events()
+  this.check_latency()
+  return await this.watchResult()
 }
 
 Inspector.prototype.nip = function(nip_num){
@@ -340,8 +373,8 @@ Inspector.prototype.on_eose = function(eose) {
   if(this.opts.debug)
     console.log(this.relay.url, "on_eose")
 
-  if(this.opts.passiveNipTests)
-    this.result.nips[15] = true
+  // if(this.opts.passiveNipTests)
+  //   this.result.nips[15] = true
 
   this.log.push(['eose', eose])
 
@@ -352,8 +385,8 @@ Inspector.prototype.on_ok = function(ok) {
   if(this.opts.debug)
     console.log(this.relay.url, "on_ok")
 
-  if(this.opts.passiveNipTests)
-    this.result.nips[20] = true
+  // if(this.opts.passiveNipTests)
+  //   this.result.nips[20] = true
   
   this.log.push(['ok', ok])
 
@@ -402,21 +435,24 @@ Inspector.prototype.try_complete = function() {
   if(didComplete) {
     if(this.result.state === 'complete')
       return
-
     if(this.opts.debug)
       console.log(this.relay.url, "did_complete", connect, read, write, latency, this.result.check)
 
-    this.result.state = 'complete'
-    // this.result.inbox = this.getInbox()
-
-    if(!this.opts.keepAlive) 
-      this.relay.close()
-
-    if(this.opts.debug) 
-      console.log(this.relay.url, 'checks', this.result.check)
-    
-    this.cbcall('complete', this)
+    this.complete()
   }
+}
+
+Inspector.prototype.complete = function() {
+  this.result.state = 'complete'
+  // this.result.inbox = this.getInbox()
+
+  if(!this.opts.keepAlive) 
+    this.relay.close()
+
+  if(this.opts.debug) 
+    console.log(this.relay.url, 'checks', this.result.check)
+  
+  this.cbcall('complete', this)
 }
 
 Inspector.prototype.observe = function() {

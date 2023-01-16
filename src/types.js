@@ -30,18 +30,18 @@ export const Result = {
     write: "write",
     latency: "latency"
   },
-  nips: Array(config.nipsTotal+1).fill(null), //1 based index!
+  // nips: Array(config.nipsTotal+1).fill(null), //1 based index!
   observations: [],
 }
 
 export const Opts = {
-  checkRead: true,
-  checkWrite: true,
-  checkLatency: true,
-  passiveNipTests: true,
-  getInfo: true,
-  getIdentities: true,
-  checkNips: true,
+  checkRead: false,
+  checkWrite: false,
+  checkLatency: false,
+  passiveNipTests: false,
+  getInfo: false,
+  getIdentities: false,
+  checkNips: false,
   checkNip: Array(config.nipsTotal+1).fill(null),
   resetNips: false,
   keepAlive: false,
