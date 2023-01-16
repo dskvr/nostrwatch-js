@@ -42,7 +42,7 @@ export const getSSLCertificateInfo = (host, timeout) => {
         
         try {
             const req = https.request(options, res => {
-                console.log(res)
+                console.log('what', res, res.socket)
                 const crt = res.socket.getPeerCertificate(),
                     vFrom = crt.valid_from, vTo = crt.valid_to;
                 var validTo = new Date(vTo);
