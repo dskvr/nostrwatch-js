@@ -52,15 +52,20 @@ Inspector.prototype.close = async function() {
 } 
 
 Inspector.prototype.setup = function(opts){
-  this.cb = {}
+  this.cb = new Object()
   this.opts = Object.assign(structuredClone(Opts), opts)
 
   this.result = structuredClone(Result)
   this.timeout = structuredClone(Timeout)
   this.instanced = false
-  this.promises = {}
+  this.promises = new Object()
   this.log = new Array()
 
+  if(this.opts.checkAverageLatency) {
+    this.latencies = new Array()
+    this.opts.checkLatency = true
+  }
+  
   if(this.opts?.data !== null) { 
     this.result = this.opts?.data?.result ? Object.assign(this.result, this.opts.data.result) : this.result
     this.log = this.opts?.data?.log || this.log
@@ -214,6 +219,9 @@ Inspector.prototype.check_read = function(benchmark) {
 
     if(!this.result.check[which]) //only set to false if null, latency may have set read to true.
       this.result.check[which] = false
+    
+    if('latency' === which)
+      this.result.check.averageLatency = false
 
     // if(which == 'latency' && this.result.check.read){
     //   if(this.opts.debug) 
@@ -270,23 +278,63 @@ Inspector.prototype.handle_event = function(subid, event) {
   if(this.opts.debug)
     console.log(this.relay.url, method)
 
-  if(this.result.count[type] < 1) {
+  if(this.result.count[type] < 1 || (type == 'latency' && this.opts.checkAverageLatency) ) {
     this.log.push(['event', event])
 
     this.result.check[type] = true
 
-    if("latency" == type)
+    
+
+    if("latency" == type) {
       this.result.latency.final = Date.now() - this.result.latency.start
       if(!this.result.check.read) //if there's latency, there's a read, force read to true
         this.result.check.read = true
+    }
+      
+    // if(this.opts.checkAverageLatency && "latency" == type && this.latencies.length <=10)
+    //   return 
 
     this.try_complete()
 
-    setTimeout( () => { 
-      clearTimeout(this.timeout[type])
-      if(this.opts.debug)
-        console.log(this.relay.url, 'cleared timeout', type, this.timeout[type])
-    }, config.millis.clearTimeoutBuffer)
+
+    if("latency" == type){
+      if(this.result.check.read === false || this.result.check.latency === false){
+        this.result.check.averageLatency = false 
+        this.try_complete()
+      }
+      if(this.opts.checkAverageLatency){
+        this.latencies.push(this.result.latency.final)
+        console.log(this.relay.url, 'check_latency[average]', this.latencies.length, this.result.latency.final)
+        if(this.latencies.length < 10){
+          this.relay.unsubscribe(this.key('latency'))
+          setTimeout(() => this.check_latency(), 1)
+          if(this.opts.debug)
+            console.log(this.relay.url, 'check average latency AGAIN')
+        }
+        else {
+          console.log(this.relay.url, 'check average latency', 'complete')
+          //min 
+          this.result.latency.min = Math.min.apply(Math, this.latencies);
+          //max
+          this.result.latency.max = Math.max.apply(Math, this.latencies);
+          //calculate average 
+          let sum = 0,
+              total = this.latencies.length
+          for (let i = 0;i<total;i++) 
+            sum += this.latencies[i]
+          this.result.latency.average = Math.floor(parseFloat(sum/total))
+          this.result.check.averageLatency = true
+          this.try_complete()
+        }
+      }
+    }
+
+    // setTimeout( () => { 
+    //   clearTimeout(this.timeout[type])
+    //   if(this.opts.debug)
+    //     console.log(this.relay.url, 'cleared timeout', type, this.timeout[type])
+    // }, config.millis.clearTimeoutBuffer)
+
   }
 
   this.result.count[type]++
@@ -392,9 +440,10 @@ Inspector.prototype.try_complete = function() {
   let connect = this.result.check.connect !== null, //check null
       read = this.result.check.read !== null || this.opts.checkRead !== true,
       write = this.result.check.write !== null || this.opts.checkWrite !== true,
-      latency = this.result.check.latency !== null || this.opts.checkLatency !== true
+      latency = this.result.check.latency !== null || this.opts.checkLatency !== true,
+      averageLatency = this.result.check.averageLatency !== null || this.opts.checkAverageLatency !== true
 
-  const didComplete = connect && read && write && latency
+  const didComplete = connect && read && write && latency && averageLatency
 
   if(this.opts.debug)
     console.log(this.relay.url, "try_complete", `state: ${this.result.state}`, connect, read, write, latency, this.result.check)
@@ -447,6 +496,7 @@ Inspector.prototype.hard_fail = function(){
   this.result.check.read = false
   this.result.check.write = false
   this.result.check.latency = false
+  this.result.check.averageLatency = false
   this.try_complete()
 
   if(this.relay.close)

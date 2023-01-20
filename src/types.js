@@ -8,7 +8,10 @@ export const Result = {
   tor: false,
   latency: {
     start: null,
-    final: null
+    final: null,
+    average: null,
+    min: null, 
+    max: null,
   },
   identities: {},
   ip: "",
@@ -18,6 +21,7 @@ export const Result = {
     read: null,
     write: null,
     latency: null,
+    averageLatency: null,
   },
   count: {
     read: 0,
@@ -38,6 +42,7 @@ export const Opts = {
   checkRead: true,
   checkWrite: true,
   checkLatency: true,
+  checkAverageLatency: true,
   passiveNipTests: true,
   getInfo: true,
   getIdentities: true,
