@@ -278,12 +278,10 @@ Inspector.prototype.handle_event = function(subid, event) {
   if(this.opts.debug)
     console.log(this.relay.url, method)
 
-  if(this.result.count[type] < 1 || (type == 'latency' && this.opts.checkAverageLatency) ) {
+  if(this.result.count[type] < 1 || (type == 'latency' && this.opts.checkAverageLatency && this.result.count[type] <= 10) ) {
     this.log.push(['event', event])
 
     this.result.check[type] = true
-
-    
 
     if("latency" == type) {
       this.result.latency.final = Date.now() - this.result.latency.start
@@ -296,7 +294,6 @@ Inspector.prototype.handle_event = function(subid, event) {
 
     this.try_complete()
 
-
     if("latency" == type){
       if(this.result.check.read === false || this.result.check.latency === false){
         this.result.check.averageLatency = false 
@@ -304,12 +301,13 @@ Inspector.prototype.handle_event = function(subid, event) {
       }
       if(this.opts.checkAverageLatency){
         this.latencies.push(this.result.latency.final)
-        console.log(this.relay.url, 'check_latency[average]', this.latencies.length, this.result.latency.final)
+        if(this.opts.debug)
+          console.log(this.relay.url, 'check_latency[average]', this.latencies.length, this.result.latency.final)
         if(this.latencies.length < 10){
           this.relay.unsubscribe(this.key('latency'))
           setTimeout(() => this.check_latency(), 1)
           if(this.opts.debug)
-            console.log(this.relay.url, 'check average latency AGAIN')
+            console.log(this.relay.url, 'check latency', `${this.latencies.length}/10`)
         }
         else {
           console.log(this.relay.url, 'check average latency', 'complete')
@@ -318,7 +316,7 @@ Inspector.prototype.handle_event = function(subid, event) {
           //max
           this.result.latency.max = Math.max.apply(Math, this.latencies);
           //calculate average 
-          let sum = 0,
+          let sum = 0,  
               total = this.latencies.length
           for (let i = 0;i<total;i++) 
             sum += this.latencies[i]
