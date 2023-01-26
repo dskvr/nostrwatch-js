@@ -126,11 +126,11 @@ Inspector.prototype.getInfoRemote = async function(){
   let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
       .then(response => response.json().catch( err => { 
         console.error(`${this.relay.url}`, err) 
-        this.log.push(['error', err])
+        // this.log.push(['error', err])
       }) )
       .catch(err => {
         console.error(`${this.relay.url}`, err) 
-        this.log.push(['error', err])
+        // this.log.push(['error', err])
       });
 
   if(this.opts.debug)
@@ -146,11 +146,11 @@ Inspector.prototype.getIdentities = async function() {
     let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
                       .then(response => isJson(response) ? response.json().catch( err => { 
                           console.error(`${this.relay.url}`, err) 
-                          this.log.push(['error', err])
+                          // this.log.push(['error', err])
                         }) : false)
                       .catch(err => {
                         console.error(`getIdentities() 404 ${this.relay.url}`, err)
-                        this.log.push(['error', err])
+                        // this.log.push(['error', err])
                       });
 
     if(this.opts.debug)
@@ -159,7 +159,7 @@ Inspector.prototype.getIdentities = async function() {
     return res?.names ? res.names : false
   } catch(err) {
     console.error(`${this.relay.url}`, err)
-    this.log.push(['error', err])
+    // this.log.push(['error', err])
     return  false
   }
 }
@@ -279,7 +279,7 @@ Inspector.prototype.handle_event = function(subid, event) {
     console.log(this.relay.url, method)
 
   if(this.result.count[type] < 1 || (type == 'latency' && this.opts.checkAverageLatency && this.result.count[type] <= 10) ) {
-    this.log.push(['event', event])
+    // this.log.push(['event', event])
 
     this.result.check[type] = true
 
@@ -389,7 +389,7 @@ Inspector.prototype.on_eose = function(eose) {
   if(this.opts.passiveNipTests)
     this.result.nips[15] = true
 
-  this.log.push(['eose', eose])
+  // this.log.push(['eose', eose])
 
   this.cbcall("eose", eose, this.result)
 }
@@ -401,7 +401,7 @@ Inspector.prototype.on_ok = function(ok) {
   if(this.opts.passiveNipTests)
     this.result.nips[20] = true
   
-  this.log.push(['ok', ok])
+  // this.log.push(['ok', ok])
 
   this.cbcall("ok", ok)
 }
@@ -428,7 +428,7 @@ Inspector.prototype.on_event = function(subid, event) {
 }
 
 Inspector.prototype.on_notice = function(notice) {
-  this.log.push(['notice', notice])
+  // this.log.push(['notice', notice])
   // this.result.observations[code_obj.description] = message_obj
   this.cbcall("notice", notice, this.result)
 }
