@@ -280,6 +280,7 @@ Inspector.prototype.handle_event = function(subid, event) {
 
   if(this.result.count[type] < 1 || (type == 'latency' && this.opts.checkAverageLatency && this.result.count[type] <= 10) ) {
     // this.log.push(['event', event])
+    this.relay.unsubscribe(subid)
 
     this.result.check[type] = true
 
@@ -322,6 +323,7 @@ Inspector.prototype.handle_event = function(subid, event) {
             sum += this.latencies[i]
           this.result.latency.average = Math.floor(parseFloat(sum/total))
           this.result.check.averageLatency = true
+          this.relay.unsubscribe(this.key('latency'))
           this.try_complete()
         }
       }
