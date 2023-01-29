@@ -99,5 +99,7 @@ export const Timeout =  {
   connect: null,
   read: null,
   write: null,
-  latency: null
+  latency: null,
+  info: null, 
+  identities: null,
 }

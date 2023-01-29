@@ -122,16 +122,26 @@ Inspector.prototype.getInfoRemote = async function(){
         headers = {
           "Accept": "application/nostr+json",
         }
-
-  let res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
-      .then(response => response.json().catch( err => { 
-        console.error(`${this.relay.url}`, err) 
-        // this.log.push(['error', err])
-      }) )
+    
+  let res = await new Promise( async (resolve) => {
+    this.timeout.info = setTimeout( () => { resolve( {} ) }, 10*60*1000 )
+    const _res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
+      .then(async response => { 
+        try {
+          return await response.json()
+        } catch (err) {
+          if (this.opts.debug)
+            console.error(`${this.relay.url}`, err)
+        } 
+      })
       .catch(err => {
         console.error(`${this.relay.url}`, err) 
+        return false
         // this.log.push(['error', err])
       });
+    resolve( _res )
+    clearTimeout(this.timeout.info)
+  })
 
   if(this.opts.debug)
     console.log(`https://${url.hostname}/`, 'check_nip_11', res)
@@ -141,27 +151,34 @@ Inspector.prototype.getInfoRemote = async function(){
 
 Inspector.prototype.getIdentities = async function() {
   const url = new URL(this.relay.url)
+  let res = new Promise( async (resolve) => {
+    this.timeout.identities = setTimeout( () => { resolve( {} ) }, 10*60*1000 )
+    const _res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
+      .then(response => {
+        if( isJson(response) ){
+          return response.json()
+            .catch( err => { 
+              if(this.opts.debug)
+                console.error(`${this.relay.url}`, err) 
+              // this.log.push(['error', err])
+            })
+        } else {
+          return false
+        }
+      })
+      .catch(err => {
+        return false
+        console.error(`getIdentities() 404 ${this.relay.url}`, err)
+        // this.log.push(['error', err])
+      });
+    resolve( _res )
+    clearTimeout(this.timeout.identities)
+  })
 
-  try {
-    let res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
-                      .then(response => isJson(response) ? response.json().catch( err => { 
-                          console.error(`${this.relay.url}`, err) 
-                          // this.log.push(['error', err])
-                        }) : false)
-                      .catch(err => {
-                        console.error(`getIdentities() 404 ${this.relay.url}`, err)
-                        // this.log.push(['error', err])
-                      });
-
-    if(this.opts.debug)
-      console.log(`https://${url.hostname}/`, 'check_nip_5', res)
-    
-    return res?.names ? res.names : false
-  } catch(err) {
-    console.error(`${this.relay.url}`, err)
-    // this.log.push(['error', err])
-    return  false
-  }
+  if(this.opts.debug)
+    console.log(`https://${url.hostname}/`, 'check_nip_5', res)
+  
+  return res?.names ? res.names : false
 }
 
 Inspector.prototype.checkLatency = function(){
@@ -220,7 +237,7 @@ Inspector.prototype.check_read = function(benchmark) {
     if(!this.result.check[which]) //only set to false if null, latency may have set read to true.
       this.result.check[which] = false
     
-    if('latency' === which)
+    if('latency' === which) //set averageLatency to false is latency failed.
       this.result.check.averageLatency = false
 
     // if(which == 'latency' && this.result.check.read){
@@ -279,6 +296,8 @@ Inspector.prototype.handle_event = function(subid, event) {
     console.log(this.relay.url, method)
 
   if(this.result.count[type] < 1 || (type == 'latency' && this.opts.checkAverageLatency && this.result.count[type] <= 10) ) {
+    clearTimeout(this.timeout[type])
+
     // this.log.push(['event', event])
     this.relay.unsubscribe(subid)
 
@@ -328,15 +347,7 @@ Inspector.prototype.handle_event = function(subid, event) {
         }
       }
     }
-
-    // setTimeout( () => { 
-    //   clearTimeout(this.timeout[type])
-    //   if(this.opts.debug)
-    //     console.log(this.relay.url, 'cleared timeout', type, this.timeout[type])
-    // }, config.millis.clearTimeoutBuffer)
-
   }
-
   this.result.count[type]++
 }
 
@@ -348,15 +359,13 @@ Inspector.prototype.on_open = async function(e) {
   if(this.opts.debug) 
     console.log(this.relay.url, "on_open")
 
-  //debug.info(url, "OPEN")
   if(this.opts.debug) 
     console.dir(this)
 
-  setTimeout( () => {
-    clearTimeout(this.timeout.connect)
-    if(this.opts.debug)
+  clearTimeout(this.timeout.connect)
+
+  if(this.opts.debug)
       console.log(this.relay.url, 'cleared timeout', 'connect', this.timeout.connect)
-  }, config.millis.clearTimeoutBuffer)
 
   this.result.check.connect = true
 
@@ -391,8 +400,6 @@ Inspector.prototype.on_eose = function(eose) {
   if(this.opts.passiveNipTests)
     this.result.nips[15] = true
 
-  // this.log.push(['eose', eose])
-
   this.cbcall("eose", eose, this.result)
 }
 
@@ -402,8 +409,6 @@ Inspector.prototype.on_ok = function(ok) {
 
   if(this.opts.passiveNipTests)
     this.result.nips[20] = true
-  
-  // this.log.push(['ok', ok])
 
   this.cbcall("ok", ok)
 }
