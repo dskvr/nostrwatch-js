@@ -204,12 +204,39 @@ Inspector.prototype.get_info = async function(){
   if(this.result?.info && this.opts.passiveNipTests)
     this.info?.supported_nips.forEach(nip => this.result.nips[nip] = true)
 
-  if(this.result?.info?.pubkey)
-    this.result.identities = Object.assign(this.result.identities, { serverAdmin: this.result.info.pubkey })
+  this.validatePubkey()
 
   if(this.opts.debug)
     console.log('get_info', this.result.info)
 
+  return true
+}
+
+Inspector.prototype.validatePubkey = function(){
+  if(this.result?.info?.pubkey) {
+    this.result.pubkeyValid = this.is_pubkey_valid()
+    if(this.result.pubkeyValid) 
+      this.result.identities = Object.assign(this.result.identities, { serverAdmin: this.result.info.pubkey })      
+  }
+  else {
+    this.result.pubkeyError = "pubkey is not set"
+  }
+}
+
+Inspector.prototype.is_pubkey_valid = function(){
+  if(this.result.info.pubkey.startsWith('npub')) {
+    this.result.pubkeyError = "pubkey is in npub format, should be hex"
+    return false
+  }
+  if(!this.result.info.pubkey.match(/[0-9A-Fa-f]{6}/g)) {
+    this.result.pubkeyError = "pubkey is not hex"
+    return false
+  }
+  const pubkey = Uint8Array.from(Buffer.from(this.result.info.pubkey, 'hex'));
+  if(pubkey.length !== 32){
+    this.result.pubkeyError = 'pubkey is expected to be 32'
+    return false
+  }
   return true
 }
 
@@ -330,7 +357,8 @@ Inspector.prototype.handle_event = function(subid, event) {
             console.log(this.relay.url, 'check latency', `${this.latencies.length}/10`)
         }
         else {
-          console.log(this.relay.url, 'check average latency', 'complete')
+          if(this.opts.debug)
+           console.log(this.relay.url, 'check average latency', 'complete')
           //min 
           this.result.latency.min = Math.min.apply(Math, this.latencies);
           //max

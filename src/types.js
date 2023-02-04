@@ -36,8 +36,10 @@ export const Result = {
   },
   nips: Array(config.nipsTotal+1).fill(null), //1 based index!
   observations: [],
+  pubkeyValid: null,
+  pubkeyError: null
 }
-
+  
 export const Opts = {
   checkRead: true,
   checkWrite: true,

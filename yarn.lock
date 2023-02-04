@@ -48,6 +48,11 @@ concat-map@0.0.1:
   resolved "https://registry.yarnpkg.com/concat-map/-/concat-map-0.0.1.tgz#d8a96bd77fd68df7793a73036a3ba0d5405d477b"
   integrity sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==
 
+convert-vapid-public-key@1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/convert-vapid-public-key/-/convert-vapid-public-key-1.1.0.tgz#87ec8394342bd53eef6ebd3bc16bd12f4fdae4be"
+  integrity sha512-CWkkLObzbwDD4Ehcs1oSMrnS1qfpbHjJg/oS6VLppk2wHMONZ7U9GmFNVeCNtEa2K4UfxReoDHNpQ8A9NEHBGA==
+
 cross-fetch@3.1.5:
   version "3.1.5"
   resolved "https://registry.yarnpkg.com/cross-fetch/-/cross-fetch-3.1.5.tgz#e1389f44d9e7ba767907f7af8454787952ab534f"
