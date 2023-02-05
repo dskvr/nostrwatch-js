@@ -4,7 +4,7 @@ import { Relay } from 'nostr'
 import crypto from 'crypto'
 import { Result, Opts, Timeout } from './types.js'
 import config from '../config/index.js'
-import { isJson } from './util.js'
+import { isJson, fileExists } from './util.js'
 import fetch from 'cross-fetch'
 
 export default function Inspector(relay, opts={})
@@ -48,7 +48,8 @@ Inspector.prototype.run = async function() {
 }
 
 Inspector.prototype.close = async function() {
-  this.relay.close()
+  if( wsIsOpen(this.relay.ws) )
+    this.relay.close()
 } 
 
 Inspector.prototype.setup = function(opts){
@@ -124,7 +125,7 @@ Inspector.prototype.getInfoRemote = async function(){
         }
     
   let res = await new Promise( async (resolve) => {
-    this.timeout.info = setTimeout( () => { resolve( {} ) }, 10*60*1000 )
+    this.timeout.info = setTimeout( () => { resolve( {} ) }, 10*1000 )
     const _res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
       .then(async response => { 
         try {
@@ -150,28 +151,33 @@ Inspector.prototype.getInfoRemote = async function(){
 }
 
 Inspector.prototype.getIdentities = async function() {
-  const url = new URL(this.relay.url)
+  const url = new URL(this.relay.url),
+        resource = `https://${url.hostname}/.well-known/nostr.json`
   let res = new Promise( async (resolve) => {
     this.timeout.identities = setTimeout( () => { resolve( {} ) }, 10*60*1000 )
-    const _res = await fetch(`https://${url.hostname}/.well-known/nostr.json`)
-      .then(response => {
-        if( isJson(response) ){
-          return response.json()
-            .catch( err => { 
-              if(this.opts.debug)
-                console.error(`${this.relay.url}`, err) 
-              // this.log.push(['error', err])
-            })
-        } else {
+    if(fileExists(resource)) {
+      const _res = await fetch(resource)
+        .then(response => {
+          if( isJson(response) ){
+            return response.json()
+              .catch( err => { 
+                if(this.opts.debug)
+                  console.error(`${this.relay.url}`, err) 
+                // this.log.push(['error', err])
+              })
+          } else {
+            return false
+          }
+        })
+        .catch(err => {
           return false
-        }
-      })
-      .catch(err => {
-        return false
-        console.error(`getIdentities() 404 ${this.relay.url}`, err)
-        // this.log.push(['error', err])
-      });
-    resolve( _res )
+          console.error(`getIdentities() 404 ${this.relay.url}`, err)
+          // this.log.push(['error', err])
+        });
+      resolve( _res )
+    } else {
+      resolve( {} )
+    }
     clearTimeout(this.timeout.identities)
   })
 
@@ -326,7 +332,8 @@ Inspector.prototype.handle_event = function(subid, event) {
     clearTimeout(this.timeout[type])
 
     // this.log.push(['event', event])
-    this.relay.unsubscribe(subid)
+    if( wsIsOpen(this.relay.ws) )
+      this.relay.unsubscribe(subid)
 
     this.result.check[type] = true
 
@@ -351,14 +358,15 @@ Inspector.prototype.handle_event = function(subid, event) {
         if(this.opts.debug)
           console.log(this.relay.url, 'check_latency[average]', this.latencies.length, this.result.latency.final)
         if(this.latencies.length < 10){
-          this.relay.unsubscribe(this.key('latency'))
+          if( wsIsOpen(this.relay.ws) )
+            this.relay.unsubscribe(this.key('latency'))
           setTimeout(() => this.check_latency(), 1)
           if(this.opts.debug)
             console.log(this.relay.url, 'check latency', `${this.latencies.length}/10`)
         }
         else {
-          if(this.opts.debug)
-           console.log(this.relay.url, 'check average latency', 'complete')
+          // if(this.opts.debug)
+          //   console.log(this.relay.url, 'check average latency', 'complete')
           //min 
           this.result.latency.min = Math.min.apply(Math, this.latencies);
           //max
@@ -370,7 +378,8 @@ Inspector.prototype.handle_event = function(subid, event) {
             sum += this.latencies[i]
           this.result.latency.average = Math.floor(parseFloat(sum/total))
           this.result.check.averageLatency = true
-          this.relay.unsubscribe(this.key('latency'))
+          if( wsIsOpen(this.relay.ws) )
+            this.relay.unsubscribe(this.key('latency'))
           this.try_complete()
         }
       }
@@ -485,6 +494,9 @@ Inspector.prototype.try_complete = function() {
     if(this.result.state === 'complete')
       return
 
+    if(!this.result.check.connect && (this.result.check.read || this.result.check.write))
+      this.result.check.connect = true //check connect is throwing a false negative sometimes
+
     if(this.opts.debug)
       console.log(this.relay.url, "did_complete", connect, read, write, latency, this.result.check)
 
@@ -492,7 +504,7 @@ Inspector.prototype.try_complete = function() {
     // this.result.inbox = this.getInbox()
 
     if(!this.opts.keepAlive) 
-      this.relay.close()
+      this.close()
 
     if(this.opts.debug) 
       console.log(this.relay.url, 'checks', this.result.check)
@@ -533,7 +545,7 @@ Inspector.prototype.hard_fail = function(){
   this.try_complete()
 
   if(this.relay.close)
-    this.relay.close()
+    this.close()
 }
 
 Inspector.prototype.sha1 = function(message) {
@@ -553,4 +565,8 @@ Inspector.prototype.cbcall = function(method) {
 
   if(typeof this.cb[method] === 'function')
     this.cb[method](...arguments)
+}
+
+const wsIsOpen = function(ws){
+  return ws.readyState === ws.OPEN
 }

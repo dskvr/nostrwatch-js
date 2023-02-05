@@ -6,3 +6,12 @@ export const isJson = function(str) {
     }
     return true;
 }
+
+export const fileExists = function(url) {
+    try{
+    var req = new XMLHttpRequest();
+    req.open('HEAD', url, false);
+    req.send();
+    return req.status !== 404;
+    } catch(e){""}
+}
