@@ -365,6 +365,7 @@ Inspector.prototype.handle_event = function(subid, event) {
             console.log(this.relay.url, 'check latency', `${this.latencies.length}/10`)
         }
         else {
+          this.result.latency.data = this.latencies
           // if(this.opts.debug)
           //   console.log(this.relay.url, 'check average latency', 'complete')
           //min 
