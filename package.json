@@ -1,6 +1,6 @@
 {
   "name": "nostr-relay-inspector",
-  "version": "0.0.32",
+  "version": "0.0.33",
   "description": "js library for inspecting nostr relays",
   "main": "index.js",
   "type": "module",
@@ -15,4 +15,4 @@
     "nostr": "0.2.7",
     "tape": "5.6.1"
   }
-}
+} 

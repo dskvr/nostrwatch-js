@@ -569,5 +569,7 @@ Inspector.prototype.cbcall = function(method) {
 }
 
 const wsIsOpen = function(ws){
+  if(!ws?.readyState || !ws?.OPEN)
+    return
   return ws.readyState === ws.OPEN
 }
