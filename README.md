@@ -15,7 +15,7 @@ import { Inspector } from 'nostrwatch-js`
 
 let inspect;
 
-//pass websocket reference 
+//pass websocket URL 
 inspect = new Inspector('wss://nostr.sandwich.farm');
 
 //...do some things with the relay
