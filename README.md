@@ -40,7 +40,7 @@ checkRelay(relay){
       if( inspector.result instanceof Object)
         doSomething(inspector.result)
       else 
-        doSomething({ url: '?'})
+        doSomething({ url: relay })
     })
     .on('error', inspector => doSomething(inspector.result, true))
     .run()
