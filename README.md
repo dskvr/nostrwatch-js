@@ -1,19 +1,17 @@
-# nostr-relay-inspector
+# nostrwatch-js
 Library for inspecting nostr relays. 
-
-**Presently alpha, result objects and API are prone to change. Docs will be published shortly after beta**
 
 ## Install
 ### npm
-`npm install nostr-relay-inspector`
+`npm install nostrwatch-js`
 
 ### yarn
-`yarn add nostr-relay-inspector`
+`yarn add nostrwatch-js`
 
 ## Usage
 
 ```
-import { Inspector } from 'nostr-relay-inspector` 
+import { Inspector } from 'nostrwatch-js` 
 
 let inspect;
 
@@ -27,8 +25,8 @@ inspect
   .on('open', (e, result) => {
     console.log('unprocessed', result);
   })
-  .on('complete', (e, result) => {
-    console.log('processed relay', result);
+  .on('complete', (e, self) => {
+    console.log('processed relay', self.result);
   })
   .run()
 ```
