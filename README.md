@@ -40,7 +40,7 @@ checkRelay(relay){
       if( inspector.result instanceof Object)
         doSomething(inspector.result)
       else 
-        doSomething({})
+        doSomething({ url: '?'})
     })
     .on('error', inspector => doSomething(inspector.result, true))
     .run()
@@ -48,7 +48,7 @@ checkRelay(relay){
 
 doSomething(result, error){
   if(!error)
-    alert(`${relay.url} - Connect?: ${relay.check.connect ? 'yes' : 'no'}, Read?: ${relay.check.read ? 'yes' : 'no'}, Write?: ${relay.check.write ? 'yes' : 'no'}`
+    alert(`${result.url} - Connect?: ${result.check.connect ? 'yes' : 'no'}, Read?: ${result.check.read ? 'yes' : 'no'}, Write?: ${result.check.write ? 'yes' : 'no'}`)
   else
     alert(`there was an error on ${result.url}`)
 }
