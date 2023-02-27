@@ -44,7 +44,6 @@ checkRelay(relay){
     })
     .on('error', inspector => doSomething(inspector.result, true))
     .run()
-    .catch( console.error )  
 }
 
 doSomething(result, error){
