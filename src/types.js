@@ -7,11 +7,10 @@ export const Result = {
   protocol: "",
   tor: false,
   latency: {
+    begin: {},
+    end: {},
     start: null,
     final: null,
-    average: null,
-    min: null, 
-    max: null,
   },
   identities: {},
   ip: "",
@@ -47,7 +46,6 @@ export const Opts = {
   checkAverageLatency: true,
   passiveNipTests: true,
   getInfo: true,
-  getIdentities: true,
   checkNips: true,
   checkNip: Array(config.nipsTotal+1).fill(null),
   resetNips: false,
@@ -58,7 +56,9 @@ export const Opts = {
   run: false,
   connectTimeout: 15000,
   readTimeout: 15000,
-  writeTimeout: 15000
+  writeTimeout: 15000,
+  latencyPings: 5,
+  delayBetweenChecks: 100
 }
 
 export const Info = {
