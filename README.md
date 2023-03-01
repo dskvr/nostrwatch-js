@@ -1,23 +1,21 @@
-# nostr-relay-inspector
+# nostrwatch-js
 Library for inspecting nostr relays. 
-
-**Presently alpha, result objects and API are prone to change. Docs will be published shortly after beta**
 
 ## Install
 ### npm
-`npm install nostr-relay-inspector`
+`npm install nostrwatch-js`
 
 ### yarn
-`yarn add nostr-relay-inspector`
+`yarn add nostrwatch-js`
 
 ## Usage
 
 ```
-import { Inspector } from 'nostr-relay-inspector` 
+import { Inspector } from 'nostrwatch-js` 
 
 let inspect;
 
-//pass websocket reference 
+//pass websocket URL 
 inspect = new Inspector('wss://nostr.sandwich.farm');
 
 //...do some things with the relay
@@ -27,8 +25,8 @@ inspect
   .on('open', (e, result) => {
     console.log('unprocessed', result);
   })
-  .on('complete', (e, result) => {
-    console.log('processed relay', result);
+  .on('complete', (e, self) => {
+    console.log('processed relay', self.result);
   })
   .run()
 ```
@@ -42,16 +40,15 @@ checkRelay(relay){
       if( inspector.result instanceof Object)
         doSomething(inspector.result)
       else 
-        doSomething({})
+        doSomething({ url: relay })
     })
     .on('error', inspector => doSomething(inspector.result, true))
     .run()
-    .catch( console.error )  
 }
 
 doSomething(result, error){
   if(!error)
-    alert(`${relay.url} - Connect?: ${relay.check.connect ? 'yes' : 'no'}, Read?: ${relay.check.read ? 'yes' : 'no'}, Write?: ${relay.check.write ? 'yes' : 'no'}`
+    alert(`${result.url} - Connect?: ${result.check.connect ? 'yes' : 'no'}, Read?: ${result.check.read ? 'yes' : 'no'}, Write?: ${result.check.write ? 'yes' : 'no'}`)
   else
     alert(`there was an error on ${result.url}`)
 }
