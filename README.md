@@ -18,9 +18,6 @@ let checker;
 //pass websocket URL 
 checker = new RelayChecker('wss://nostr.sandwich.farm');
 
-//...do some things with the relay
-checker = new RelayChecker(relay);
-
 checker
   .on('open', (e, result) => {
     console.log('unprocessed result', result);
