@@ -1,7 +1,7 @@
 {
   "name": "nostrwatch-js",
-  "version": "0.0.2",
-  "description": "js library for aggregating data from nostr relays",
+  "version": "0.0.3",
+  "description": "js library for aggregating data from and checking the status of nostr relays",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -13,6 +13,7 @@
     "js-yaml": "4.1.0",
     "node-fetch": "3.3.0",
     "nostr": "0.2.7",
+    "nostr-tools": "1.7.4",
     "tape": "5.6.1"
   }
-} 
+}
