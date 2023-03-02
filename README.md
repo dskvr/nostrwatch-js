@@ -11,49 +11,23 @@ Library for inspecting nostr relays.
 ## Usage
 
 ```
-import { Inspector } from 'nostrwatch-js` 
+import { RelayChecker } from 'nostrwatch-js` 
 
-let inspect;
+let checker;
 
 //pass websocket URL 
-inspect = new Inspector('wss://nostr.sandwich.farm');
+checker = new RelayChecker('wss://nostr.sandwich.farm');
 
 //...do some things with the relay
-inspect = new Inspector(relay);
+checker = new RelayChecker(relay);
 
-inspect
+checker
   .on('open', (e, result) => {
-    console.log('unprocessed', result);
+    console.log('unprocessed result', result);
   })
   .on('complete', (e, self) => {
-    console.log('processed relay', self.result);
+    console.log('processed result', self.result);
   })
-  .run()
-```
-
-# Example
-```
-checkRelay(relay){
-  let inspect = new Inspector(relay)
-  inspect
-    .on('complete', inspector => {
-      if( inspector.result instanceof Object)
-        doSomething(inspector.result)
-      else 
-        doSomething({ url: relay })
-    })
-    .on('error', inspector => doSomething(inspector.result, true))
-    .run()
-}
-
-doSomething(result, error){
-  if(!error)
-    alert(`${result.url} - Connect?: ${result.check.connect ? 'yes' : 'no'}, Read?: ${result.check.read ? 'yes' : 'no'}, Write?: ${result.check.write ? 'yes' : 'no'}`)
-  else
-    alert(`there was an error on ${result.url}`)
-}
-
-checkRelay('wss://nostr.damus.io')
 ```
 
 ## Todo

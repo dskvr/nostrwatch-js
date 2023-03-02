@@ -1,10 +1,16 @@
 /* eslint-disable */
-import Inspector from './src/inspector.js'
-import {Result as InspectorResult, Opts as InspectorOpts, Timeout as InspectorTimeout} from './src/types.js'
+import RelayChecker from './src/checker.js'
+import {Result as RelayCheckerResult, Opts as RelayCheckerOpts, Timeout as RelayCheckerTimeout} from './src/types.js'
+import { getAverageLatency, getMedianLatency, getMinLatency, getMaxLatency } from './src/utils.js'
 
 export {
-  Inspector,
-  InspectorResult,
-  InspectorOpts,
-  InspectorTimeout
+  RelayChecker,
+  RelayCheckerResult,
+  RelayCheckerOpts,
+  RelayCheckerTimeout,
+
+  getAverageLatency,
+  getMedianLatency,
+  getMinLatency,
+  getMaxLatency
 }
