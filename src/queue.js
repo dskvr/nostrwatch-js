@@ -6,12 +6,12 @@ const DEFAULT_MAX_QUEUES = 10,
       DEFAULT_CONCURRENCY = 5,
       DEFAULT_FAST_TIMEOUT = 3000
 
-export default function BatchChecker(relays, opts){
+export default function QueuedChecker(relays, opts){
   this.setup(relays, opts)
   this.run()
 }
 
-BatchChecker.prototype.setup = function(relays, opts){
+QueuedChecker.prototype.setup = function(relays, opts){
   if(!(relays instanceof Array))
     return console.error('relays argument must be an array')
 
@@ -75,13 +75,13 @@ BatchChecker.prototype.setup = function(relays, opts){
   this.elapsed = 0
 }
 
-BatchChecker.prototype.run = async function(){
+QueuedChecker.prototype.run = async function(){
   this.queuesInit()
   await Promise.all(this.promises.map( deferred => deferred.promise ))
   this.on_complete()
 }
 
-BatchChecker.prototype.queuesInit = async function(fast){
+QueuedChecker.prototype.queuesInit = async function(fast){
   for(let index=0; index<this.queue.length; index++) {
     this.queue[index] = new Queue({concurrency: this.concurrency})
     this.addJobsToQueue(index)
@@ -91,7 +91,7 @@ BatchChecker.prototype.queuesInit = async function(fast){
   }
 }
 
-BatchChecker.prototype.addJobsToQueue = async function(index){
+QueuedChecker.prototype.addJobsToQueue = async function(index){
   let added = 0
   while(added < 5){
     if(!this.relays.length && !this.retry.length)
@@ -102,16 +102,16 @@ BatchChecker.prototype.addJobsToQueue = async function(index){
   }
 }
 
-BatchChecker.prototype.tryComplete = function(index){
+QueuedChecker.prototype.tryComplete = function(index){
   if(!this.relays.length && !this.retry.length)
     this.promises[index].resolve()
 }
 
-BatchChecker.prototype.job = function(type){
+QueuedChecker.prototype.job = function(type){
   return async () => await this.check(this[type].shift(), type)
 }
 
-BatchChecker.prototype.check = async function(relay, type){
+QueuedChecker.prototype.check = async function(relay, type){
   return new Promise( resolve => {
     let $checker = new RelayChecker(relay, this.RelayCheckerOpts)
     $checker
@@ -122,7 +122,7 @@ BatchChecker.prototype.check = async function(relay, type){
   })
 }
 
-BatchChecker.prototype.delay = async function($checker) {
+QueuedChecker.prototype.delay = async function($checker) {
   await new Promise( resolve => setTimeout(resolve, this.fastTimeout) )
   this.retry.push($checker.result.url)
   console.log($checker.result.url, 'timeout!')
@@ -130,23 +130,23 @@ BatchChecker.prototype.delay = async function($checker) {
   $checker = null
 }
 
-BatchChecker.prototype.checkComplete = async function($checker) {
+QueuedChecker.prototype.checkComplete = async function($checker) {
   if(this.timeouts[$checker.url] !== null)
     this.timeouts[$checker.url] = null
   this.on_result($checker.result)
 }
 
-BatchChecker.prototype.abort = function(){
+QueuedChecker.prototype.abort = function(){
   this.controller
 }
 
-BatchChecker.prototype.on_complete = function(){
+QueuedChecker.prototype.on_complete = function(){
   this.duration = Date.now()-this.start 
   console.log(`took ${Math.round(this.duration/1000)} seconds`)
   this.cbcall("complete", this.results)
 }
 
-BatchChecker.prototype.on_result = function(result){
+QueuedChecker.prototype.on_result = function(result){
   const relay = result.url
   this.completed.push(relay)
   this.results[relay] = result
@@ -154,19 +154,19 @@ BatchChecker.prototype.on_result = function(result){
   this.cbcall("result", result, this)
 }
 
-BatchChecker.prototype.cbcall = function(method) {
+QueuedChecker.prototype.cbcall = function(method) {
   [].shift.call(arguments,1)
 
   if(typeof this.cb[method] === 'function')
     this.cb[method](...arguments)
 }
 
-BatchChecker.prototype.on = function(method, fn) {
+QueuedChecker.prototype.on = function(method, fn) {
   this.cb[method] = fn
   return this
 }
 
-BatchChecker.prototype.updateProgress = function(){
+QueuedChecker.prototype.updateProgress = function(){
   const pending = [...this.relays, ...this.retry].length
   const total = pending+this.completed.length
   this.progress = Math.floor(this.completed.length/total*100)
