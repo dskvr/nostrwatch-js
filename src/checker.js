@@ -59,11 +59,11 @@ RelayChecker.prototype.setup = function(opts){
 
   this.result = structuredClone(Result)
   this.timeout = structuredClone(Timeout)
-  this.instanced = false
-  this.promises = new Object()
   this.result.log = new Array()
-  this.latencies = new Array()
+  this.read_latencies = new Array()
   this.checks = new Array()
+
+  this.testEvent = this.opts.testEvent || config.testEvent
   
   if(this.opts?.data !== null) 
     this.result = this.opts?.data?.result ? Object.assign(this.result, this.opts.data.result) : this.result
@@ -175,7 +175,7 @@ RelayChecker.prototype.is_pubkey_valid = function(){
   Event Emitters
 */
 RelayChecker.prototype.check_read = function(benchmark) {
-  const which = benchmark ? `latency-${this.latencies.length}` : 'read'
+  const which = benchmark ? `latency-${this.read_latencies.length}` : 'read'
   const subid = this.key(which)
 
   if(this.opts.debug)
@@ -210,22 +210,25 @@ RelayChecker.prototype.check_write = function() {
   if(this.opts.debug)
     console.log(this.relay.url, "check_write", subid)
   
-  if(!this.opts?.testEvent && this.result?.info?.limitation?.payment_required)
+  if(!this.opts?.testEvent && this.payment_required())
     this.opts.testEvent = this.generateTestEvent()
 
-  const event = this.opts.testEvent || config.testEvent
-
   if(this.opts.debug)
-    console.log(this.relay.url, "test_event", event.id, event.content)
+    console.log(this.relay.url, "test_event", this.testEvent.id, this.testEvent.content)
 
   this.result.latency.begin.write = Date.now()
-  this.relay.send(["EVENT", event])
-  // this.relay.subscribe(subid, {limit: 1, kinds:[1], ids:[config.testEvent.id]})
+  this.relay.send(["EVENT", this.testEvent])
+
+  if(this.payment_required())
+    this.relay.subscribe(subid, {limit: 1, kinds:[1], ids:[this.testEvent.id]})
 
   this.timeout.write = setTimeout(() => {
     if(this.opts.debug) 
       console.log(this.relay.url, "check_write_timeout", subid)
-    this.log('timeout', `Relay did not send 'ok' within ${this.opts.writeTimeout}ms of publishing an event`)
+    if(this.payment_required())
+      this.log('timeout', `Subscription to test event was not recieved within ${this.opts.writeTimeout}ms of publishing the event (${this.testEvent.id})`)
+    else 
+      this.log('timeout', `Relay did not send 'ok' within ${this.opts.writeTimeout}ms of publishing an event`)
     this.result.check.write = false
     if(this.checks.length)
       this.execute_next_check()
@@ -238,12 +241,12 @@ RelayChecker.prototype.check_latency = function(index) {
   if(this.result.check.read === false)
     return this.skip_latency_check(index)
 
-  const key = `latency-${this.latencies.length}`
+  const key = `latency-${this.read_latencies.length}`
   const subid = this.key(key)
   
   this.result.count[key] = 0
 
-  this.result.latency.begin[this.latencies.length] = Date.now()
+  this.result.latency.begin[this.read_latencies.length] = Date.now()
 
   this.check_read(true)
 }
@@ -294,45 +297,57 @@ RelayChecker.prototype.handle_event = function(subid, event) {
     if( this.wsIsOpen() )
       this.relay.unsubscribe(subid)
 
-    if(type === 'read'){
-      this.result.latency.read = Date.now() - this.result.latency.begin.read
-      this.log('success', `handled event from read check in ${this.result.latency.read}ms`)
-      this.result.check.read = true
+    if(!type.includes('latency')){
+      this.result.latency[type] = Date.now() - this.result.latency.begin[type]
+      if(type === 'write')
+        this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms (test event.id: ${this.testEvent.id})`)
+      else
+        this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms`)
+      this.result.check[type] = true
     }
     else {
-      this.handle_latencies()
+      this.handle_read_latencies()
     }
+
     this.on_change()
     this.execute_next_check()
   }
   this.result.count[type]++
 }
 
-RelayChecker.prototype.handle_latencies = function(){
-  const latency = Date.now() - this.result.latency.begin[this.latencies.length]
-  this.latencies.push(latency)
+RelayChecker.prototype.handle_read_latencies = function(){
+  const latency = Date.now() - this.result.latency.begin[this.read_latencies.length]
+  this.read_latencies.push(latency)
 
-  this.log(`success`, `latency check #${this.latencies.length} was ${latency}ms `)
+  this.log(`success`, `latency check #${this.read_latencies.length} was ${latency}ms `)
 
-  if(this.latencies.length < this.opts.latencyPings){
+  if(this.read_latencies.length < this.opts.latencyPings){
+
     if( this.wsIsOpen() )
-      this.relay.unsubscribe(this.key(`latency-${this.latencies.length}`))
+      this.relay.unsubscribe(this.key(`latency-${this.read_latencies.length}`))
+
     if(this.opts.debug)
-      console.log(this.relay.url, 'check_latency', `${this.latencies.length}/${this.opts.latencyPings}`, `took ${latency}ms`)
+      console.log(this.relay.url, 'check_latency', `${this.read_latencies.length}/${this.opts.latencyPings}`, `took ${latency}ms`)
+
   }
   else {
-    this.result.latency.data = this.latencies
+
+    this.result.latency.data = this.read_latencies
+
     if( this.wsIsOpen() )
-      this.relay.unsubscribe(this.key(`latency-${this.latencies.length}`))
+      this.relay.unsubscribe(this.key(`latency-${this.read_latencies.length}`))
+
     this.result.check.latency = true
     this.try_complete()
+
   }
   this.on_change()
 }
 
 RelayChecker.prototype.do_handle_event = function(type){
-  if(type.includes('latency') && this.result.count[type] < 1 && this.latencies.length <= this.opts.latencyPings) 
+  if(type.includes('latency') && this.result.count[type] < 1 && this.read_latencies.length <= this.opts.latencyPings) 
     return true
+    
   if(this.result.count[type] < 1)
     return true 
 }
@@ -396,6 +411,9 @@ RelayChecker.prototype.on_eose = function(eose) {
 RelayChecker.prototype.on_ok = function(ok) {
   if(this.opts.debug)
     console.log(this.relay.url, "on_ok")
+
+  if(this.payment_required())
+    return
   
   clearTimeout(this.timeout.write)
   this.result.latency.write = Date.now() - this.result.latency.begin.write
@@ -449,8 +467,8 @@ RelayChecker.prototype.try_complete = function() {
     if(this.result.state === 'complete')
       return
 
-    if(!this.result.check.connect && (this.result.check.read || this.result.check.write))
-      this.result.check.connect = true
+    // if(!this.result.check.connect && (this.result.check.read || this.result.check.write))
+    //   this.result.check.connect = true
 
     if(this.opts.debug)
       console.log(this.relay.url, "did_complete", connect, read, write, latency, this.result.check)
@@ -513,11 +531,15 @@ RelayChecker.prototype.cbcall = function(method) {
 }
 
 RelayChecker.prototype.wsIsOpen = function(){
-  return this.relay.ws.readyState === 1
+  return this.relay.ws?.readyState === 1
 }
 
 RelayChecker.prototype.log = function(type, message){
   this.result.log.push([type, message])
+}
+
+RelayChecker.prototype.payment_required = function(){
+  return this.result?.info?.limitation?.payment_required
 }
 
 RelayChecker.prototype.generateTestEvent = function(){
