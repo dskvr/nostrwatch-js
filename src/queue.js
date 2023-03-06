@@ -2,9 +2,10 @@ import RelayChecker from './checker.js'
 import { Opts as RelayCheckerOpts } from './types.js'
 import Queue from 'p-queue'
 
-const DEFAULT_MAX_QUEUES = 10,
-      DEFAULT_CONCURRENCY = 5,
-      DEFAULT_FAST_TIMEOUT = 3000
+const DEFAULT_MAX_QUEUES = 20,
+      DEFAULT_CONCURRENCY = 1,
+      DEFAULT_FAST_TIMEOUT = 3000,
+      DEFAULT_THROTTLE = 100
 
 export default function QueuedChecker(relays, opts){
   this.setup(relays, opts)
@@ -44,6 +45,9 @@ QueuedChecker.prototype.setup = function(relays, opts){
   if(this.maxQueues > this.relays.length)
     this.maxQueues = this.relays.length
 
+  //Throttle millis before starting each job.
+  this.throttleMillis = opts?.throttleMillis || DEFAULT_THROTTLE
+
   //Array for Queue instances 
   this.queue = new Array(this.maxQueues)
 
@@ -73,10 +77,13 @@ QueuedChecker.prototype.setup = function(relays, opts){
 
   //Elapsed time (updated each relay's on_result)
   this.elapsed = 0
+  
+  this.lastJobQueued = Date.now()
 }
 
 QueuedChecker.prototype.run = async function(){
   this.queuesInit()
+  console.log(this.promises.map( deferred => deferred.promise ))
   await Promise.all(this.promises.map( deferred => deferred.promise ))
   this.on_complete()
 }
@@ -91,24 +98,38 @@ QueuedChecker.prototype.queuesInit = async function(fast){
   }
 }
 
+QueuedChecker.prototype.tryComplete = function(index){
+  if(!this.relays.length && !this.retry.length && Date.now()>this.lastJobQueued+(2*this.RelayCheckerOpts.connectTimeout*2))
+    this.promises[index].resolve()
+}
+
 QueuedChecker.prototype.addJobsToQueue = async function(index){
   let added = 0
   while(added < 5){
     if(!this.relays.length && !this.retry.length)
       break
+
+    await this.throttle()
+
     const type = this.relays.length ? 'relays' : 'retry'
-    await this.queue[index].add(this.job(type))
+    
+    await this.queue[index].add(await this.job(type))
     added++
   }
 }
 
-QueuedChecker.prototype.tryComplete = function(index){
-  if(!this.relays.length && !this.retry.length)
-    this.promises[index].resolve()
+QueuedChecker.prototype.job = async function(type){
+  return async () => await this.check(this[type].shift(), type)
 }
 
-QueuedChecker.prototype.job = function(type){
-  return async () => await this.check(this[type].shift(), type)
+QueuedChecker.prototype.throttle = async function(){
+  const deltaLJ = Date.now() - this.lastJobQueued,
+        deltaJD = this.throttleMillis-deltaLJ,
+        delay = deltaJD > 0 ? deltaJD : 0
+
+  this.lastJobQueued = (delay === 0)? Date.now(): this.lastJobQueued+this.throttleMillis
+
+  return new Promise( resolve => setTimeout( () => resolve(delay), delay ))
 }
 
 QueuedChecker.prototype.check = async function(relay, type){
@@ -118,12 +139,16 @@ QueuedChecker.prototype.check = async function(relay, type){
       .on('complete', self => this.checkComplete(self).then(resolve))
       .run()
     if(type === 'relays')
-      this.timeouts[$checker.url] = this.delay($checker).then(resolve)
+      this.timeouts[$checker.url] = this.retryRelay($checker).then(resolve)
   })
 }
 
-QueuedChecker.prototype.delay = async function($checker) {
-  await new Promise( resolve => setTimeout(resolve, this.fastTimeout) )
+QueuedChecker.prototype.delay = async function(delay) {
+  await new Promise( resolve => setTimeout(resolve, delay) )
+}
+
+QueuedChecker.prototype.retryRelay = async function($checker){
+  await this.delay(this.fastTimeout)
   this.retry.push($checker.result.url)
   console.log($checker.result.url, 'timeout!')
   $checker.close()
