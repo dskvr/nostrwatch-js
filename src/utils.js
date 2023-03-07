@@ -1,4 +1,6 @@
 export const getAverageLatency = function(latencies){
+  if(!latencies?.length)
+    return null
   return Math.round(latencies.reduce((a, b) => a + b) / latencies.length);
 }
 
