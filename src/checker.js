@@ -21,6 +21,25 @@ export default function RelayChecker(relay, opts={})
   return this
 }
 
+RelayChecker.prototype.setup = function(opts){
+  this.cb = new Object()
+  this.opts = Object.assign(structuredClone(Opts), opts)
+
+  this.result = structuredClone(Result)
+  this.timeout = structuredClone(Timeout)
+  this.result.log = new Array()
+  this.read_latencies = new Array()
+  this.checks = new Array()
+
+  this.testEvent = this.opts.testEvent || config.testEvent
+  
+  if(this.opts?.data !== null) 
+    this.result = this.opts?.data?.result ? Object.assign(this.result, this.opts.data.result) : this.result
+
+  if(this.opts.debug)
+    console.log('options', this.opts)
+}
+
 // PUBLIC
 RelayChecker.prototype.run = async function() {
   if(this.opts.debug) 
@@ -52,26 +71,6 @@ RelayChecker.prototype.close = async function() {
   if( this.wsIsOpen() )
     this.relay.close()
 } 
-
-RelayChecker.prototype.setup = function(opts){
-  this.cb = new Object()
-  this.opts = Object.assign(structuredClone(Opts), opts)
-
-  this.result = structuredClone(Result)
-  this.timeout = structuredClone(Timeout)
-  this.result.log = new Array()
-  this.read_latencies = new Array()
-  this.checks = new Array()
-
-  this.testEvent = this.opts.testEvent || config.testEvent
-  
-  if(this.opts?.data !== null) 
-    this.result = this.opts?.data?.result ? Object.assign(this.result, this.opts.data.result) : this.result
-
-  if(this.opts.debug)
-    console.log('options', this.opts)
-}
-
 RelayChecker.prototype.setOpts = function() {
   if(arguments[0] == 'checkNip'){
     if(typeof arguments[1] === 'string') {
