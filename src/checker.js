@@ -44,14 +44,10 @@ RelayChecker.prototype.setup = function(opts){
 RelayChecker.prototype.run = async function() {
   if(this.opts.debug) 
     console.log(this.relay.url, "running")
-
-  this.connect_timeout(this.relay.url)
-
-  this.result.latency.begin['connect'] = Date.now()
-
+  
   if(!this.relay.onfn.open)
     this.relay
-      .on('open',     (e) => this.on_open(e))
+      .on('open',   (e) => this.on_open(e))
 
   this.relay
     .on('eose',     (e) => this.on_eose(e))
@@ -63,6 +59,21 @@ RelayChecker.prototype.run = async function() {
 
   if(!this.opts.run) //only call if not autorun
     this.cbcall('run', this.result)
+  
+  if(this.opts.debug)
+    console.log(this.relay.url, "connect_timeout_init", this.opts.connectTimeout)
+
+  this.timeout.connect = setTimeout(() => {
+    if(this.latency?.connect)
+      return console.warn(this.relay.url, `timeout still triggered for some reason when connect=${connect}... returning.`)
+    if(this.opts.debug)
+      console.log(this.relay.url, "connect_timeout")
+    this.log('timeout', `Could not connect to relay within ${this.opts.connectTimeout}ms`)
+    this.hard_fail()
+  }, this.opts.connectTimeout)
+  
+  this.connect_timeout(this.relay.url)
+  this.result.latency.begin.connect = Date.now()
 
   return this
 }
@@ -88,6 +99,7 @@ RelayChecker.prototype.setOpts = function() {
 }
 
 RelayChecker.prototype.getInfo = async function(){
+  this.update_state(`retrieving nip11`)
   this.result.latency.begin.nip11 = Date.now()
   const url = new URL(this.relay.url),
         headers = {
@@ -117,7 +129,7 @@ RelayChecker.prototype.getInfo = async function(){
         return false
       });
     resolve( _res )
-    clearTimeout(this.timeout.info)
+    clearTimeout(this.timeout.info) 
   })
 
   if(this.opts.debug)
@@ -174,6 +186,8 @@ RelayChecker.prototype.is_pubkey_valid = function(){
   Event Emitters
 */
 RelayChecker.prototype.check_read = function(benchmark) {
+  
+
   const which = benchmark ? `latency-${this.read_latencies.length}` : 'read'
   const subid = this.key(which)
 
@@ -183,18 +197,20 @@ RelayChecker.prototype.check_read = function(benchmark) {
   this.result.latency.begin.read = Date.now()
   this.relay.subscribe(subid, {limit: 1, kinds:[1]})
 
+  if('read' === which)
+    this.update_state(`subscribed, waiting for event(s)`)
+
   this.timeout[which] = setTimeout(() => {
     if(this.opts.debug) 
       console.log(this.relay.url, "check_read_timeout", `via: ${which}`, subid)
 
     const logLabel = which.includes('latency') ? 'latency' : 'read'
-    this.log(`timeout`, `A ${logLabel} check timed out since it did not complete within ${this.opts[`${logLabel}Timeout`]}ms`)
+    this.log(`timeout`, `A ${logLabel} check timed out since it did not complete within ${this.opts?.readTimeout}ms`)
 
     if(which.includes('latency'))
       this.result.check.latency = false 
     else 
       this.result.check.read = false
-      
     
     if(this.checks.length)
       this.execute_next_check()
@@ -204,6 +220,8 @@ RelayChecker.prototype.check_read = function(benchmark) {
 }
 
 RelayChecker.prototype.check_write = function() {
+  this.update_state(`checking write`)
+  
   const subid = this.key('write')
 
   if(this.opts.debug)
@@ -216,10 +234,13 @@ RelayChecker.prototype.check_write = function() {
     console.log(this.relay.url, "test_event", this.testEvent.id, this.testEvent.content)
 
   this.result.latency.begin.write = Date.now()
+
   this.relay.send(["EVENT", this.testEvent])
 
   if(this.payment_required())
     this.relay.subscribe(subid, {limit: 1, kinds:[1], ids:[this.testEvent.id]})
+
+  this.update_state(`published event and subscribed, waiting for event(s)`)
 
   this.timeout.write = setTimeout(() => {
     if(this.opts.debug) 
@@ -270,7 +291,7 @@ RelayChecker.prototype.execute_next_check = async function(){
   if(!this.checks.length)
     return this.try_complete()
   
-  if(this.opts.delayBetweenChecks > 0) 
+  if(this.opts?.delayBetweenChecks > 0) 
     await new Promise( resolve => setTimeout(resolve, this.opts.delayBetweenChecks))
 
   this.on_change()
@@ -297,12 +318,12 @@ RelayChecker.prototype.handle_event = function(subid, event) {
       this.relay.unsubscribe(subid)
 
     if(!type.includes('latency')){
+      this.result.check[type] = true
       this.result.latency[type] = Date.now() - this.result.latency.begin[type]
       if(type === 'write')
         this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms (test event.id: ${this.testEvent.id})`)
       else
         this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms`)
-      this.result.check[type] = true
     }
     else {
       this.handle_read_latencies()
@@ -317,6 +338,7 @@ RelayChecker.prototype.handle_event = function(subid, event) {
 RelayChecker.prototype.handle_read_latencies = function(){
   const latency = Date.now() - this.result.latency.begin[this.read_latencies.length]
   this.read_latencies.push(latency)
+  this.update_state(`checked latency #${this.read_latencies.length}/${this.opts.latencyPings}`)
 
   this.log(`success`, `latency check #${this.read_latencies.length} was ${latency}ms `)
 
@@ -340,6 +362,7 @@ RelayChecker.prototype.handle_read_latencies = function(){
     this.try_complete()
 
   }
+
   this.on_change()
 }
 
@@ -360,19 +383,13 @@ RelayChecker.prototype.on_change = function(){
 }
 
 RelayChecker.prototype.on_open = async function(e) {
-  if(this.opts.debug) 
-    console.log(this.relay.url, "on_open")
-
-  this.result.latency.connect = Date.now() - this.result.latency.begin.connect
-
-  this.log('success', `connected to relay in ${this.result.latency.connect}ms`)
-
-  clearTimeout(this.timeout.connect)
-
-  if(this.opts.debug)
+    if(this.opts.debug)
     console.log(this.relay.url, 'cleared timeout', 'connect')
 
   this.result.check.connect = true
+  this.result.latency.connect = Date.now() - this.result.latency.begin.connect
+
+  this.log('success', `connected to relay in ${this.result.latency.connect}ms`)
 
   if(this.opts.getInfo)
     await this.get_info()
@@ -388,8 +405,15 @@ RelayChecker.prototype.on_open = async function(e) {
       this.checks.push(() => this.check_latency(c))
     }
   }
+
+  if(this.opts.debug) 
+    console.log(this.relay.url, "on_open")
+
+  clearTimeout(this.timeout.connect)
+
   this.execute_next_check()
   this.cbcall("open", e, this.result)
+
 }
 
 
@@ -405,6 +429,11 @@ RelayChecker.prototype.on_eose = function(eose) {
     console.log(this.relay.url, "on_eose")
 
   this.cbcall("eose", eose, this.result)
+}
+
+RelayChecker.prototype.update_state = function(state){
+  this.result.state = state
+  this.on_change()
 }
 
 RelayChecker.prototype.on_ok = function(ok) {
@@ -485,23 +514,19 @@ RelayChecker.prototype.try_complete = function() {
 }
 
 RelayChecker.prototype.connect_timeout = function(relay_url){
-  if(this.opts.debug)
-    console.log(relay_url, "connect_timeout_init")
-
-  this.timeout.connect = setTimeout(() => {
-    if(this.opts.debug)
-      console.log(relay_url, "connect_timeout")
-    this.log('timeout', `Could not connect to relay within ${this.opts.connectTimeout}ms`)
-    this.hard_fail()
-  }, this.opts.connectTimeout)
 }
 
 RelayChecker.prototype.hard_fail = function(){
   if(this.state === 'complete')
     return 
+  
+  if( this.wsIsOpen() )
+    this.close()
     
   if(this.opts.debug)
     console.log(this.relay.url, "hard_fail")
+  
+  this.checks = new Array()
 
   this.result.check.connect = false
   this.result.check.read = false

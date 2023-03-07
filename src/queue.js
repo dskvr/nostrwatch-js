@@ -1,10 +1,12 @@
 import RelayChecker from './checker.js'
-import { Opts as RelayCheckerOpts } from './types.js'
+import { Opts as RelayCheckerOpts, Result as RelayCheckerResult } from './types.js'
 import Queue from 'p-queue'
 
-const DEFAULT_MAX_QUEUES = 10,
-      DEFAULT_CONCURRENCY = 5,
-      DEFAULT_FAST_TIMEOUT = 3000
+const DEFAULT_MAX_QUEUES = 20,
+      DEFAULT_CONCURRENCY = 1,
+      DEFAULT_FAST_TIMEOUT = 3000,
+      DEFAULT_THROTTLE = 100,
+      DEFAULT_REFILL_NUM = 20
 
 export default function QueuedChecker(relays, opts){
   this.setup(relays, opts)
@@ -38,11 +40,16 @@ QueuedChecker.prototype.setup = function(relays, opts){
   this.maxQueues = opts?.maxQueues || DEFAULT_MAX_QUEUES
 
   //How many jobs run concurrently per queue
-  this.concurrency = opts?.concurrency || DEFAULT_CONCURRENCY
+  this.concurrency = opts?.concurrency ? opts.concurrency : DEFAULT_CONCURRENCY
 
   //If maxQueues is more than relays, reset to relays.length. TODO: Convert to one-liner (&)
   if(this.maxQueues > this.relays.length)
     this.maxQueues = this.relays.length
+
+  //Throttle millis before starting each job.
+  this.throttleMillis = opts?.throttleMillis || DEFAULT_THROTTLE
+
+  this.numRelaysPerRefill = opts?.numRelaysPerRefill || DEFAULT_REFILL_NUM
 
   //Array for Queue instances 
   this.queue = new Array(this.maxQueues)
@@ -73,67 +80,101 @@ QueuedChecker.prototype.setup = function(relays, opts){
 
   //Elapsed time (updated each relay's on_result)
   this.elapsed = 0
+  
+  this.lastJobQueued = Date.now()
 }
 
 QueuedChecker.prototype.run = async function(){
   this.queuesInit()
+  console.log(this.promises.map( deferred => deferred.promise ))
   await Promise.all(this.promises.map( deferred => deferred.promise ))
   this.on_complete()
 }
 
 QueuedChecker.prototype.queuesInit = async function(fast){
   for(let index=0; index<this.queue.length; index++) {
-    this.queue[index] = new Queue({concurrency: this.concurrency})
+    this.queue[index] = new Queue({
+      concurrency: this.concurrency,
+      autoStart: false
+    })
     this.addJobsToQueue(index)
     this.queue[index].on('empty', () => this.addJobsToQueue(index))
     this.queue[index].on('idle', () => this.tryComplete(index) )
     this.promises[index] = new Deferred()
   }
-}
 
-QueuedChecker.prototype.addJobsToQueue = async function(index){
-  let added = 0
-  while(added < 5){
-    if(!this.relays.length && !this.retry.length)
-      break
-    const type = this.relays.length ? 'relays' : 'retry'
-    await this.queue[index].add(this.job(type))
-    added++
+  for(let index=0; index<this.queue.length; index++) {
+    await this.delay(1000)
+    this.queue[index].start()
   }
 }
 
 QueuedChecker.prototype.tryComplete = function(index){
-  if(!this.relays.length && !this.retry.length)
+  if(!this.relays.length 
+      && !this.retry.length)
     this.promises[index].resolve()
 }
 
+QueuedChecker.prototype.addJobsToQueue = async function(index){
+  let added = 0
+  while(added < this.numRelaysPerRefill){
+    if(!this.relays.length && !this.retry.length)
+      break
+    const type = this.relays.length ? 'relays' : 'retry'
+    this.addJob(index, type)
+    added++
+  }
+}
+
+QueuedChecker.prototype.addJob = async function(index, type){
+  await this.throttle()
+  this.queue[index].add(this.job(type))
+}
+
 QueuedChecker.prototype.job = function(type){
-  return async () => await this.check(this[type].shift(), type)
+  return () => this.check(this[type].shift(), type)
+}
+
+QueuedChecker.prototype.throttle = async function(){
+        //Difference between now and the lastJobQueued
+  const deltaLJ = Date.now() - this.lastJobQueued,
+        //Difference between our throttle and the delta
+        deltaJD = Math.round(this.throttleMillis-deltaLJ),
+        //If greater than 0 add delay
+        delay = deltaJD > 0 ? deltaJD : 0
+
+  this.lastJobQueued = (delay === 0)? Date.now(): this.lastJobQueued+delay
+
+  return new Promise( resolve => setTimeout( () => resolve(delay), delay ))
 }
 
 QueuedChecker.prototype.check = async function(relay, type){
+  console.log('checking at:', Date.now())
   return new Promise( resolve => {
     let $checker = new RelayChecker(relay, this.RelayCheckerOpts)
     $checker
-      .on('complete', self => this.checkComplete(self).then(resolve))
+      .on('complete', self => {
+        console.log('check()', self)
+        this.on_result(self.result).then(resolve)
+      })
+      .on('error', () => {
+        this.on_result($checker.result).then(resolve)
+      })
       .run()
-    if(type === 'relays')
-      this.timeouts[$checker.url] = this.delay($checker).then(resolve)
+    // if(type === 'relays')
+    //   this.timeouts[$checker.url] = this.retryRelay($checker).then(resolve)
   })
 }
 
-QueuedChecker.prototype.delay = async function($checker) {
-  await new Promise( resolve => setTimeout(resolve, this.fastTimeout) )
-  this.retry.push($checker.result.url)
-  console.log($checker.result.url, 'timeout!')
-  $checker.close()
-  $checker = null
+QueuedChecker.prototype.delay = async function(delay) {
+  await new Promise( resolve => setTimeout(resolve, delay) )
 }
 
-QueuedChecker.prototype.checkComplete = async function($checker) {
-  if(this.timeouts[$checker.url] !== null)
-    this.timeouts[$checker.url] = null
-  this.on_result($checker.result)
+QueuedChecker.prototype.retryRelay = async function($checker){
+  await this.delay(this.fastTimeout)
+  this.retry.push($checker.result.url)
+  $checker.close()
+  $checker = null
 }
 
 QueuedChecker.prototype.abort = function(){
@@ -146,7 +187,13 @@ QueuedChecker.prototype.on_complete = function(){
   this.cbcall("complete", this.results)
 }
 
-QueuedChecker.prototype.on_result = function(result){
+QueuedChecker.prototype.on_result = async function(result){
+  console.log('on result!', result?.url, result?.check, result?.latency)
+
+  // if(this.timeouts[result.url] !== null)
+  //   this.timeouts[result.url] = null
+
+  console.log(result.url, 'checkComplete()', 'connect:', result.check?.connect)
   const relay = result.url
   this.completed.push(relay)
   this.results[relay] = result
