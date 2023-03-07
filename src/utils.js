@@ -1,7 +1,7 @@
 export const getAverageLatency = function(latencies){
   // if(!latencies?.length)
   //   return null
-  return Math.round(latencies.reduce((a, b) => a + b) / latencies.length);
+  return Math.round(latencies?.filter(l => l || l?.length).reduce((a, b) => a + b) / latencies.length);
 }  
 
 export const getMedianLatency = function(latencies){
