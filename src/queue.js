@@ -86,7 +86,7 @@ QueuedChecker.prototype.setup = function(relays, opts){
 
 QueuedChecker.prototype.run = async function(){
   this.queuesInit()
-  console.log(this.promises.map( deferred => deferred.promise ))
+  // console.log(this.promises.map( deferred => deferred.promise ))
   await Promise.all(this.promises.map( deferred => deferred.promise ))
   this.on_complete()
 }
@@ -110,8 +110,7 @@ QueuedChecker.prototype.queuesInit = async function(fast){
 }
 
 QueuedChecker.prototype.tryComplete = function(index){
-  if(!this.relays.length 
-      && !this.retry.length)
+  if(!this.relays.length)
     this.promises[index].resolve()
 }
 
@@ -136,25 +135,19 @@ QueuedChecker.prototype.job = function(type){
 }
 
 QueuedChecker.prototype.throttle = async function(){
-        //Difference between now and the lastJobQueued
-  const deltaLJ = Date.now() - this.lastJobQueued,
-        //Difference between our throttle and the delta
-        deltaJD = Math.round(this.throttleMillis-deltaLJ),
-        //If greater than 0 add delay
-        delay = deltaJD > 0 ? deltaJD : 0
-
-  this.lastJobQueued = (delay === 0)? Date.now(): this.lastJobQueued+delay
-
+  const lJ = this?.lastJobQueued || Date.now(),
+        delay = this.throttleMillis
+  this.lastJobQueued = lJ+this.throttleMillis
   return new Promise( resolve => setTimeout( () => resolve(delay), delay ))
 }
 
 QueuedChecker.prototype.check = async function(relay, type){
-  console.log('checking at:', Date.now())
+  // console.log('checking at:', Date.now())
   return new Promise( resolve => {
     let $checker = new RelayChecker(relay, this.RelayCheckerOpts)
     $checker
       .on('complete', self => {
-        console.log('check()', self)
+        // console.log('check()', self)
         this.on_result(self.result).then(resolve)
       })
       .on('error', () => {
@@ -188,12 +181,12 @@ QueuedChecker.prototype.on_complete = function(){
 }
 
 QueuedChecker.prototype.on_result = async function(result){
-  console.log('on result!', result?.url, result?.check, result?.latency)
+  // console.log('on result!', result?.url, result?.check, result?.latency)
 
   // if(this.timeouts[result.url] !== null)
   //   this.timeouts[result.url] = null
 
-  console.log(result.url, 'checkComplete()', 'connect:', result.check?.connect)
+  // console.log(result.url, 'checkComplete()', 'connect:', result.check?.connect)
   const relay = result.url
   this.completed.push(relay)
   this.results[relay] = result
