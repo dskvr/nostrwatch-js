@@ -1,6 +1,6 @@
 {
   "name": "nostrwatch-js",
-  "version": "0.0.36",
+  "version": "0.0.37",
   "description": "js library for aggregating data from and checking the status of nostr relays",
   "main": "index.js",
   "type": "module",
