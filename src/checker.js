@@ -331,10 +331,13 @@ RelayChecker.prototype.handle_event = function(subid, event) {
       this.result.check[type] = true
       this.result.latency[type] = Date.now() - this.result.latency.begin[type]
       if(type === 'write'){
-        if(this.payment_required())
+        if(this.payment_required()){
           this.log('error', `paid relay failed to block spam note (test event.id: ${this.testEvent.id})`)
-        else 
+          this.result.check.spamMitigation = false
+        } 
+        else {
           this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms (test event.id: ${this.testEvent.id})`)
+        }
       }
       else {
         this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms`)
