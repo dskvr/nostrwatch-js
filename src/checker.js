@@ -237,11 +237,12 @@ RelayChecker.prototype.check_write = function() {
     this.opts.checkSpamMitigation = true
     this.result.check.write = null
     this.opts.checkWrite = false
-    this.log('info', `Skipped write check for paid relay.`)
+    this.log('info', `Skipped write check (only checked for public relays)`)
     this.relay.subscribe(subid, {limit: 1, kinds:[1], ids:[this.testEvent.id]})
     this.update_state(`testing spam protection`)
   }   
   else {
+    this.log('info', `Skipped spam mitigation check (only checked for paid relays for now)`)
     this.update_state(`testing write capabilities`)
   }
 
@@ -329,10 +330,15 @@ RelayChecker.prototype.handle_event = function(subid, event) {
     if(!type.includes('latency')){
       this.result.check[type] = true
       this.result.latency[type] = Date.now() - this.result.latency.begin[type]
-      if(type === 'write')
-        this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms (test event.id: ${this.testEvent.id})`)
-      else
+      if(type === 'write'){
+        if(this.payment_required())
+          this.log('error', `paid relay failed to block spam note (test event.id: ${this.testEvent.id})`)
+        else 
+          this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms (test event.id: ${this.testEvent.id})`)
+      }
+      else {
         this.log('success', `handled event from ${type} check in ${this.result.latency[type]}ms`)
+      }
     }
     else {
       this.handle_read_latencies()
