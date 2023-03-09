@@ -186,8 +186,6 @@ RelayChecker.prototype.is_pubkey_valid = function(){
   Event Emitters
 */
 RelayChecker.prototype.check_read = function(benchmark) {
-  
-
   const which = benchmark ? `latency-${this.read_latencies.length}` : 'read'
   const subid = this.key(which)
 
@@ -226,9 +224,10 @@ RelayChecker.prototype.check_write = function() {
 
   if(this.opts.debug)
     console.log(this.relay.url, "check_write", subid)
-  
+
+  console.log('user defined test event', this.opts?.testEvent)
   if(!this.opts?.testEvent && this.payment_required())
-    this.opts.testEvent = this.generateTestEvent()
+    this.testEvent = this.generateTestEvent()
 
   if(this.opts.debug)
     console.log(this.relay.url, "test_event", this.testEvent.id, this.testEvent.content)
