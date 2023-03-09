@@ -274,6 +274,8 @@ RelayChecker.prototype.check_latency = function(index) {
   this.result.count[key] = 0
 
   this.result.latency.begin[this.read_latencies.length] = Date.now()
+  
+  this.update_state(`checking latency #${this.read_latencies.length}/${this.opts.latencyPings}`)
 
   this.check_read(true)
 }
@@ -282,7 +284,7 @@ RelayChecker.prototype.skip_latency_check = function(index){
   if(this.opts.debug)
       console.log(this.relay.url, "skip_latency_check", "Skipping since read check failed")      
   if(index === 0)
-    this.log('skip', `Latency checks are being skipped since the read check failed`)
+    this.log('info', `Latency checks are being skipped since the read check failed`)
   this.result.check.latency = false
   if(this.checks.length)
     this.execute_next_check()
