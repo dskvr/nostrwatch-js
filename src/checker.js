@@ -218,14 +218,11 @@ RelayChecker.prototype.check_read = function(benchmark) {
 }
 
 RelayChecker.prototype.check_write = function() {
-  this.update_state(`checking write`)
-  
   const subid = this.key('write')
 
   if(this.opts.debug)
     console.log(this.relay.url, "check_write", subid)
 
-  console.log('user defined test event', this.opts?.testEvent)
   if(!this.opts?.testEvent && this.payment_required())
     this.testEvent = this.generateTestEvent()
 
@@ -236,19 +233,30 @@ RelayChecker.prototype.check_write = function() {
 
   this.relay.send(["EVENT", this.testEvent])
 
-  if(this.payment_required())
+  if(this.payment_required()){
+    this.opts.checkSpamMitigation = true
+    this.result.check.write = null
+    this.opts.checkWrite = false
+    this.log('info', `Skipped write check for paid relay.`)
     this.relay.subscribe(subid, {limit: 1, kinds:[1], ids:[this.testEvent.id]})
-
-  this.update_state(`published event and subscribed, waiting for event(s)`)
+    this.update_state(`testing spam protection`)
+  }   
+  else {
+    this.update_state(`testing write capabilities`)
+  }
 
   this.timeout.write = setTimeout(() => {
     if(this.opts.debug) 
       console.log(this.relay.url, "check_write_timeout", subid)
-    if(this.payment_required())
-      this.log('timeout', `Subscription to test event was not recieved within ${this.opts.writeTimeout}ms of publishing the event (${this.testEvent.id})`)
-    else 
+    if(this.payment_required()) {
+      this.result.check.spamMitigation = true
+      this.log('success', `Paid relay successfully blocked a spam note (spam event id: ${this.testEvent.id})`)
+    }
+    else {
       this.log('timeout', `Relay did not send 'ok' within ${this.opts.writeTimeout}ms of publishing an event`)
-    this.result.check.write = false
+      this.result.check.write = false
+    }
+    
     if(this.checks.length)
       this.execute_next_check()
     else
@@ -398,6 +406,9 @@ RelayChecker.prototype.on_open = async function(e) {
 
   if(this.opts.checkWrite)
     this.checks.push(() => this.check_write())
+  
+  // if(this.opts.checkWrite && !this.payment_required())
+  //   this.checks.push(() => this.check_spam_protection())
 
   if(this.opts.checkLatency) {
     for(let c=0;c<this.opts.latencyPings;c++){
@@ -483,9 +494,11 @@ RelayChecker.prototype.try_complete = function() {
   let connect = this.result.check.connect !== null, //check null
       read = this.result.check.read !== null || this.opts.checkRead !== true,
       write = this.result.check.write !== null || this.opts.checkWrite !== true,
-      latency = this.result.check.latency !== null || this.opts.checkLatency !== true
+      latency = this.result.check.latency !== null || this.opts.checkLatency !== true,
+      spam = this.result.check.spamMitigation !== null || this.opts.checkSpamMitigation !== true
 
-  const didComplete = connect && read && write && latency
+
+  const didComplete = connect && read && write && latency && spam
 
   if(this.opts.debug)
     console.log(this.relay.url, "try_complete", `state: ${this.result.state}`, connect, read, write, latency)

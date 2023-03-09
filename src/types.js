@@ -21,6 +21,7 @@ export const Result = {
     write: null,
     latency: null,
     averageLatency: null,
+    spamMitigation: null
   },
   count: {
     read: 0,
@@ -44,6 +45,7 @@ export const Opts = {
   checkWrite: true,
   checkLatency: true,
   checkAverageLatency: true,
+  checkSpamMitigation: false,
   passiveNipTests: true,
   getInfo: true,
   checkNips: true,
