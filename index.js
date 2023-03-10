@@ -5,6 +5,9 @@ import {Result as RelayCheckerResult, Opts as RelayCheckerOpts, Timeout as Relay
 import { getAverageLatency, getMedianLatency, getMinLatency, getMaxLatency } from './src/utils.js'
 
 export {
+  //Queue 
+  QueuedChecker,
+
   //Relay Checker
   RelayChecker,
 
@@ -12,9 +15,6 @@ export {
   RelayCheckerResult,
   RelayCheckerOpts,
   RelayCheckerTimeout,
-
-  //Queue 
-  QueuedChecker,
 
   //Utils
   getAverageLatency,
