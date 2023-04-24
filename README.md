@@ -13,16 +13,16 @@ Library for inspecting nostr relays.
 ```
 import { RelayChecker } from 'nostrwatch-js` 
 
-let checker;
+let $checker;
 
 //pass websocket URL 
-checker = new RelayChecker('wss://nostr.sandwich.farm');
+$checker = new RelayChecker('wss://nostr.sandwich.farm');
 
-checker
+$checker
   .on('change', (result) => {
     console.log('something updated', result);
   })
-  .on('complete', (e, self) => {
+  .on('complete', (self) => {
     console.log('processed result', self.result);
   })
 ```
