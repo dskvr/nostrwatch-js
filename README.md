@@ -19,8 +19,8 @@ let checker;
 checker = new RelayChecker('wss://nostr.sandwich.farm');
 
 checker
-  .on('open', (e, result) => {
-    console.log('unprocessed result', result);
+  .on('change', (result) => {
+    console.log('something updated', result);
   })
   .on('complete', (e, self) => {
     console.log('processed result', self.result);
