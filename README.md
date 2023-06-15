@@ -16,7 +16,7 @@ import { RelayChecker } from 'nostrwatch-js`
 let $checker;
 
 //pass websocket URL 
-$checker = new RelayChecker('wss://nostr.sandwich.farm');
+$checker = new RelayChecker('wss://relay.nostr.band');
 
 $checker
   .on('change', (result) => {
