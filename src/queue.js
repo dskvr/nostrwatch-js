@@ -6,7 +6,7 @@ const DEFAULT_MAX_QUEUES = 20,
       DEFAULT_CONCURRENCY = 1,
       DEFAULT_FAST_TIMEOUT = 3000,
       DEFAULT_THROTTLE = 100,
-      DEFAULT_REFILL_NUM = 20
+      DEFAULT_REFILL_NUM = 1
 
 export default function QueuedChecker(relays, opts){
   this.setup(relays, opts)
@@ -144,6 +144,8 @@ QueuedChecker.prototype.throttle = async function(){
 QueuedChecker.prototype.check = async function(relay, type){
   // console.log('checking at:', Date.now())
   return new Promise( resolve => {
+    if(typeof relay === 'undefined')
+      resolve()
     let $checker = new RelayChecker(relay, this.RelayCheckerOpts)
     $checker
       .on('complete', self => {
@@ -165,7 +167,8 @@ QueuedChecker.prototype.delay = async function(delay) {
 
 QueuedChecker.prototype.retryRelay = async function($checker){
   await this.delay(this.fastTimeout)
-  this.retry.push($checker.result.url)
+  if(typeof $checker.result.url !== 'undefined')
+    this.retry.push($checker.result.url)
   $checker.close()
   $checker = null
 }

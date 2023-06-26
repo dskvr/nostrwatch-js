@@ -4,14 +4,13 @@ import crypto from 'crypto'
 import { Result, Opts, Timeout } from './types.js'
 import config from '../config/index.js'
 import fetch from 'cross-fetch'
-import {generatePrivateKey, getPublicKey, getEventHash, signEvent} from 'nostr-tools'
-
-
+import { generateRandomKeypair, signRandomEvent, hashString, getRandomInt } from './utils.js'
+import * as nipper from './nips/index.js'
 
 export default function RelayChecker(relay, opts={})
 {
   this.setup(opts)
-  this.relay =  new Relay(relay, {reconnect: false})
+  this.relay = new Relay(relay, {reconnect: false})
   this.result.state = 'pending'
   this.result.url = this.relay.url
 
@@ -51,35 +50,26 @@ RelayChecker.prototype.run = async function() {
 
   this.relay
     .on('eose',     (e) => this.on_eose(e))
-    .on('error',    (e) => this.on_error(e))
     .on('ok',       (e) => this.on_ok(e))
     .on('close',    (e) => this.on_close(e))
     .on('event',    (subid, event) => this.on_event(subid, event))
     .on('notice',   (notice) => this.on_notice(notice))
+    .on('error',    (e) => this.on_error(e))
 
   if(!this.opts.run) //only call if not autorun
     this.cbcall('run', this.result)
   
   if(this.opts.debug)
     console.log(this.relay.url, "connect_timeout_init", this.opts.connectTimeout)
-
-  this.timeout.connect = setTimeout(() => {
-    if(this.latency?.connect)
-      return console.warn(this.relay.url, `timeout still triggered for some reason when connect=${connect}... returning.`)
-    if(this.opts.debug)
-      console.log(this.relay.url, "connect_timeout")
-    this.log('timeout', `Could not connect to relay within ${this.opts.connectTimeout}ms`)
-    this.hard_fail()
-  }, this.opts.connectTimeout)
   
-  this.connect_timeout(this.relay.url)
+  this.connect_timeout()
   this.result.latency.begin.connect = Date.now()
 
   return this
 }
 
 RelayChecker.prototype.close = async function() {
-  if( this.wsIsOpen() )
+  if( this.wsIsOpen() || this.wsIsConnecting() )
     this.relay.close()
 } 
 RelayChecker.prototype.setOpts = function() {
@@ -90,7 +80,7 @@ RelayChecker.prototype.setOpts = function() {
     if(Array.isArray(arguments[1])) {
       arguments[1].forEach((nip) => {
         this.opts.checkNip[nip] = arguments[2]
-      })
+      })  
     }
   }
   else {
@@ -205,10 +195,12 @@ RelayChecker.prototype.check_read = function(benchmark) {
     const logLabel = which.includes('latency') ? 'latency' : 'read'
     this.log(`timeout`, `A ${logLabel} check timed out since it did not complete within ${this.opts?.readTimeout}ms`)
 
-    if(which.includes('latency'))
+    if(which.includes('latency')){
       this.result.check.latency = false 
-    else 
+      this.read_latencies.push(null)
+    } else {
       this.result.check.read = false
+    }
     
     if(this.checks.length)
       this.execute_next_check()
@@ -223,9 +215,11 @@ RelayChecker.prototype.check_write = function() {
   if(this.opts.debug)
     console.log(this.relay.url, "check_write", subid)
 
-  if(!this.opts?.testEvent && this.payment_required())
-    this.testEvent = this.generateTestEvent()
-
+  if(!this.opts?.testEvent && this.payment_required()){
+    const [sk, pk] = generateRandomKeypair()
+    this.testEvent = signRandomEvent(sk, pk)
+  }
+  
   if(this.opts.debug)
     console.log(this.relay.url, "test_event", this.testEvent.id, this.testEvent.content)
 
@@ -361,33 +355,24 @@ RelayChecker.prototype.handle_read_latencies = function(){
   this.log(`success`, `latency check #${this.read_latencies.length} was ${latency}ms `)
 
   if(this.read_latencies.length < this.opts.latencyPings){
-
     if( this.wsIsOpen() )
       this.relay.unsubscribe(this.key(`latency-${this.read_latencies.length}`))
-
     if(this.opts.debug)
       console.log(this.relay.url, 'check_latency', `${this.read_latencies.length}/${this.opts.latencyPings}`, `took ${latency}ms`)
-
   }
   else {
-
     this.result.latency.data = this.read_latencies
-
     if( this.wsIsOpen() )
       this.relay.unsubscribe(this.key(`latency-${this.read_latencies.length}`))
-
     this.result.check.latency = true
     this.try_complete()
-
   }
-
   this.on_change()
 }
 
 RelayChecker.prototype.do_handle_event = function(type){
   if(type.includes('latency') && this.result.count[type] < 1 && this.read_latencies.length <= this.opts.latencyPings) 
     return true
-    
   if(this.result.count[type] < 1)
     return true 
 }
@@ -434,7 +419,6 @@ RelayChecker.prototype.on_open = async function(e) {
 
   this.execute_next_check()
   this.cbcall("open", e, this.result)
-
 }
 
 
@@ -508,7 +492,6 @@ RelayChecker.prototype.try_complete = function() {
       latency = this.result.check.latency !== null || this.opts.checkLatency !== true,
       spam = this.result.check.spamMitigation !== null || this.opts.checkSpamMitigation !== true
 
-
   const didComplete = connect && read && write && latency && spam
 
   if(this.opts.debug)
@@ -518,8 +501,8 @@ RelayChecker.prototype.try_complete = function() {
     if(this.result.state === 'complete')
       return
 
-    // if(!this.result.check.connect && (this.result.check.read || this.result.check.write))
-    //   this.result.check.connect = true
+    if(!this.result.check.connect && (this.result.check.read || this.result.check.write))
+      this.result.check.connect = true
 
     if(this.opts.debug)
       console.log(this.relay.url, "did_complete", connect, read, write, latency, this.result.check)
@@ -536,15 +519,22 @@ RelayChecker.prototype.try_complete = function() {
   }
 }
 
-RelayChecker.prototype.connect_timeout = function(relay_url){
+RelayChecker.prototype.connect_timeout = function(){
+  this.timeout.connect = setTimeout(() => {
+    if(this.latency?.connect)
+      return console.warn(this.relay.url, `timeout still triggered for some reason when connect=${connect}... returning.`)
+    if(this.opts.debug)
+      console.log(this.relay.url, "connect_timeout")
+    this.log('timeout', `Could not connect to relay within ${this.opts.connectTimeout}ms`)
+    this.hard_fail()
+  }, this.opts.connectTimeout)
 }
 
 RelayChecker.prototype.hard_fail = function(){
   if(this.state === 'complete')
     return 
   
-  if( this.wsIsOpen() )
-    this.close()
+  this.close()
     
   if(this.opts.debug)
     console.log(this.relay.url, "hard_fail")
@@ -570,15 +560,17 @@ RelayChecker.prototype.on = function(method, fn) {
 
 RelayChecker.prototype.cbcall = function(method) {
   [].shift.call(arguments,1)
-
   // console.log(this.relay.url, 'cbcall', method, ...arguments)
-
   if(typeof this.cb[method] === 'function')
     this.cb[method](...arguments)
 }
 
 RelayChecker.prototype.wsIsOpen = function(){
-  return this.relay.ws?.readyState === 1
+  return this.relay.ws?.readyState === WebSocket.OPEN
+}
+
+RelayChecker.prototype.wsIsConnecting = function(){
+  return this.relay.ws.readyState === WebSocket.CONNECTING
 }
 
 RelayChecker.prototype.log = function(type, message){
@@ -597,36 +589,9 @@ RelayChecker.prototype.generateTestEvent = function(){
   if(!this.result?.info?.limitation?.payment_required)
     return 
   //generate keypair 
-  let sk = generatePrivateKey() // `sk` is a hex string
-  let pk = getPublicKey(sk) // `pk` is a hex string
 
   //randomize event content 
-  const event = {
-    created_at: Math.round(Date.now()/1000),
-    kind: 1,
-    content: crypto.randomBytes(getRandomInt(10,120)).toString('hex'),
-    tags: [],
-    pubkey: pk
-  }
-
-  event.id = getEventHash(event)
-  event.sig = signEvent(event, sk)
-
-  return event
-}
-
-function getRandomInt(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function hashString(str) {
-  let hash = 0;
-  for (let i = 0, len = str.length; i < len; i++) {
-      let chr = str.charCodeAt(i);
-      hash = (hash << 5) - hash + chr;
-      hash |= 0; // Convert to 32bit integer
-  }
-  return hash;
+  
+  const [sk, pk] = generateRandomKeypair()
+  return signRandomEvent(sk, pk)
 }

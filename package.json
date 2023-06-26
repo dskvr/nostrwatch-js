@@ -8,6 +8,7 @@
     "test": "tape test/*.js"
   },
   "dependencies": {
+    "ajv": "8.12.0",
     "convert-vapid-public-key": "1.1.0",
     "cross-fetch": "3.1.5",
     "js-yaml": "4.1.0",
@@ -15,6 +16,7 @@
     "nostr": "0.2.7",
     "nostr-tools": "1.7.4",
     "p-queue": "7.3.4",
+    "promise-deferred": "2.0.3",
     "tape": "5.6.1"
   }
 }

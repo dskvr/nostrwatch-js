@@ -1,5 +1,6 @@
 import config from '../config/index.js'
 
+
 export const Result = {
   url: "",
   state: "standby",
@@ -107,3 +108,9 @@ export const Timeout =  {
   info: null, 
   identities: null,
 }
+
+export const NipOptions = {
+  timeout: 10000,
+  autorun: false
+}
+
