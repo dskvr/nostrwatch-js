@@ -450,7 +450,7 @@ RelayChecker.prototype.on_ok = function(ok) {
   
   clearTimeout(this.timeout.write)
   this.result.latency.write = Date.now() - this.result.latency.begin.write
-  this.log('success', `recieved 'ok' from relay on write check in ${this.result.latency.write}ms`)
+  this.log('success', `received 'ok' from relay on write check in ${this.result.latency.write}ms`)
   this.result.check.write = true 
 
   this.execute_next_check()
@@ -480,7 +480,7 @@ RelayChecker.prototype.on_event = function(subid, event) {
 }
 
 RelayChecker.prototype.on_notice = function(notice) {
-  this.log('notice', `Recieved notice from relay: ${notice}`)
+  this.log('notice', `Received notice from relay: ${notice}`)
   this.cbcall("notice", notice, this.result)
   this.on_change()
 }
