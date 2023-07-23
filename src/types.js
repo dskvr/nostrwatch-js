@@ -53,8 +53,6 @@ export const Opts = {
   checkNip: Array(config.nipsTotal+1).fill(null),
   resetNips: false,
   keepAlive: false,
-  // getIp: false,
-  // getGeo: false,
   debug: false,
   run: false,
   connectTimeout: 15000,

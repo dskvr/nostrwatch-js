@@ -298,8 +298,6 @@ RelayChecker.prototype.execute_next_check = async function(){
   if(this.opts?.delayBetweenChecks > 0) 
     await new Promise( resolve => setTimeout(resolve, this.opts.delayBetweenChecks))
 
-  this.on_change()
-
   const fn = this.checks.shift()
   
   if(!(fn instanceof Function))
@@ -570,7 +568,7 @@ RelayChecker.prototype.wsIsOpen = function(){
 }
 
 RelayChecker.prototype.wsIsConnecting = function(){
-  return this.relay.ws.readyState === WebSocket.CONNECTING
+  return this.relay.ws?.readyState === WebSocket.CONNECTING
 }
 
 RelayChecker.prototype.log = function(type, message){

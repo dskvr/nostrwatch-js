@@ -31,7 +31,7 @@ QueuedChecker.prototype.setup = function(relays, opts){
   this.completed = new Array()
 
   //holds user defined callbacks.
-  this.cb = new Object()
+  this.cb = {}
 
   //Accumulator, TODO: add option to enable/disable
   this.results = new Object
@@ -205,6 +205,7 @@ QueuedChecker.prototype.cbcall = function(method) {
 }
 
 QueuedChecker.prototype.on = function(method, fn) {
+  console.log(typeof this.cb, typeof method, typeof fn)
   this.cb[method] = fn
   return this
 }
