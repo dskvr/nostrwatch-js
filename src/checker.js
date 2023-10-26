@@ -100,7 +100,8 @@ RelayChecker.prototype.getInfo = async function(){
       this.log(`timeout`, `NIP-11 info document was not returned within 10000 milliseconds`) //need to add timeout opt for info.
       resolve( {} ) 
     }, 10*1000 )
-    const _res = await fetch(`https://${url.hostname}/`, { method: 'GET', headers: headers})
+    url.protocol = "https"
+    const _res = await fetch(url.toString(), { method: 'GET', headers: headers})
       .then(async response => { 
         try {
           let res = await response.json()
