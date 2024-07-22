@@ -157,6 +157,10 @@ RelayChecker.prototype.validate_pubkey = function(){
 }
 
 RelayChecker.prototype.is_pubkey_valid = function(){
+  if(typeof this.result.info.pubkey !== 'string') {
+    this.result.pubkeyError = "pubkey should be a string"
+    return false
+  }
   if(this.result.info.pubkey.startsWith('npub')) {
     this.result.pubkeyError = "pubkey is in npub format, should be hex"
     return false
